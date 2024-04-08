@@ -1,3 +1,4 @@
+import asyncio
 import runpod
 from runpod.serverless.utils import rp_upload
 import json
@@ -377,7 +378,7 @@ def stream_output(process, stream_type):
     for line in iter(stream.readline, ''):
         print(line.strip())
 
-def start_subprocess():
+def start_comfyui_subprocess():
     global is_subprocess_running
     global subprocess_handle
     
@@ -386,7 +387,7 @@ def start_subprocess():
         return
 
     # Define the environment variables for the subprocess
-    env_vars = os.environ.copy()
+    env_vars = {}
     # Set a specific environment variable for the subprocess
     env_vars["LD_PRELOAD"] = "path_to_libtcmalloc.so"  # Update this path as necessary
 
@@ -429,10 +430,30 @@ def stop_subprocess():
 def restart():
     print("Restarting the subprocess...")
     stop_subprocess()
-    start_subprocess()
+    start_comfyui_subprocess()
+
+def start_aiohttp_server_subprocess():
+    aiohttp_server_subprocess_handle = subprocess.Popen(
+        ["python3",  "app/server.py"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        bufsize=1,
+        universal_newlines=True,
+        text=True
+    )
+
+    # Start threads to read the aiohttp server subprocess's output and error streams
+    stdout_thread = threading.Thread(target=stream_output, args=(aiohttp_server_subprocess_handle, 'stdout'))
+    stderr_thread = threading.Thread(target=stream_output, args=(aiohttp_server_subprocess_handle, 'stderr'))
+    stdout_thread.start()
+    stderr_thread.start()
 
 # Start the handler only if this script is run directly
 if __name__ == "__main__":
-    start_subprocess()
-    print("main.py Subprocess started. Running status:", is_subprocess_running)
+    print("main.py Starting aiohttp server...")
+    start_aiohttp_server_subprocess()
+
+    print("Starting comfyui...")
+    start_comfyui_subprocess()
+
     runpod.serverless.start({"handler": handler})
