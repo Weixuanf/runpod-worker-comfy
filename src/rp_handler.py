@@ -272,21 +272,33 @@ def process_output_images(outputs, job_id):
             "message": f"the image does not exist in the specified output folder: {local_image_path}",
         }
 
+def scanner_git_url(git_url:str):
+    # Make sure that the ComfyUI API is available
+    check_server(
+        f"http://{COMFY_HOST}",
+        COMFY_API_AVAILABLE_MAX_RETRIES,
+        COMFY_API_AVAILABLE_INTERVAL_MS,
+    )
+    data = json.dumps({"gitUrl": git_url}).encode("utf-8")
+
+    req = urllib.request.Request(f"http://{COMFY_HOST}/scanner/scan_git_url", data=data)
+    resp = json.loads(urllib.request.urlopen(req).read())
+    print(f"scanner git url response: {resp}")
+    restart()
+    check_server(
+        f"http://{COMFY_HOST}",
+        COMFY_API_AVAILABLE_MAX_RETRIES,
+        COMFY_API_AVAILABLE_INTERVAL_MS,
+    )
+    return resp
+
 
 def handler(job):
-    """
-    The main function that handles a job of generating an image.
-
-    This function validates the input, sends a prompt to ComfyUI for processing,
-    polls ComfyUI for result, and retrieves generated images.
-
-    Args:
-        job (dict): A dictionary containing job details and input parameters.
-
-    Returns:
-        dict: A dictionary containing either an error message or a success status with generated images.
-    """
+    print(f"handler received job {job}")
     job_input = job["input"]
+
+    if(job_input.get("scannerGitUrl")):
+        return scanner_git_url(job_input.get("scannerGitUrl"))
 
     # Make sure that the input is valid
     validated_data, error_message = validate_input(job_input)
@@ -344,7 +356,83 @@ def handler(job):
 
     return result
 
+import subprocess
+import os
+import signal
+import threading
+
+# Global variable to track the subprocess status
+is_subprocess_running = False
+# Subprocess handle
+subprocess_handle = None
+
+def stream_output(process, stream_type):
+    """
+    Forward the output of the subprocess to the console.
+    
+    :param process: The subprocess handle
+    :param stream_type: Type of the stream ('stdout' or 'stderr')
+    """
+    stream = process.stdout if stream_type == 'stdout' else process.stderr
+    for line in iter(stream.readline, ''):
+        print(line.strip())
+
+def start_subprocess():
+    global is_subprocess_running
+    global subprocess_handle
+    
+    if is_subprocess_running:
+        print("Subprocess is already running.")
+        return
+
+    # Define the environment variables for the subprocess
+    env_vars = os.environ.copy()
+    # Set a specific environment variable for the subprocess
+    env_vars["LD_PRELOAD"] = "path_to_libtcmalloc.so"  # Update this path as necessary
+
+    # Start the subprocess and redirect its output and error
+    subprocess_handle = subprocess.Popen(
+        ["python3", "/comfyui/main.py", "--disable-auto-launch", "--disable-metadata"],
+        env=env_vars,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        bufsize=1,
+        universal_newlines=True,
+        text=True
+    )
+    is_subprocess_running = True
+
+    # Start threads to read the subprocess's output and error streams
+    stdout_thread = threading.Thread(target=stream_output, args=(subprocess_handle, 'stdout'))
+    stderr_thread = threading.Thread(target=stream_output, args=(subprocess_handle, 'stderr'))
+    stdout_thread.start()
+    stderr_thread.start()
+
+def stop_subprocess():
+    global is_subprocess_running
+    global subprocess_handle
+    
+    if subprocess_handle:
+        # Terminate the subprocess
+        subprocess_handle.terminate()
+        try:
+            # Wait for the subprocess to terminate
+            subprocess_handle.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            # Force kill if not terminated within timeout
+            os.kill(subprocess_handle.pid, signal.SIGKILL)
+        finally:
+            subprocess_handle = None
+            is_subprocess_running = False
+            print("Subprocess stopped.")
+
+def restart():
+    print("Restarting the subprocess...")
+    stop_subprocess()
+    start_subprocess()
 
 # Start the handler only if this script is run directly
 if __name__ == "__main__":
+    start_subprocess()
+    print("main.py Subprocess started. Running status:", is_subprocess_running)
     runpod.serverless.start({"handler": handler})
