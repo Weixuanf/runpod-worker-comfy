@@ -1,4 +1,3 @@
-import asyncio
 import runpod
 from runpod.serverless.utils import rp_upload
 import json
@@ -9,6 +8,10 @@ import os
 import requests
 import base64
 from io import BytesIO
+from app.clearCustomNodesFolder import clear_except_allowed_folder
+import subprocess
+import signal
+import threading
 
 # Time to wait between API check attempts in milliseconds
 COMFY_API_AVAILABLE_INTERVAL_MS = 50
@@ -20,6 +23,7 @@ COMFY_POLLING_INTERVAL_MS = 250
 COMFY_POLLING_MAX_RETRIES = 500
 # Host where ComfyUI is running
 COMFY_HOST = "127.0.0.1:8188"
+COMFYUI_PATH = 'comfyui'
 # Enforce a clean state after each job is done
 # see https://docs.runpod.io/docs/handler-additional-controls#refresh-worker
 REFRESH_WORKER = os.environ.get("REFRESH_WORKER", "false").lower() == "true"
@@ -275,24 +279,31 @@ def process_output_images(outputs, job_id):
 
 def scanner_git_url(git_url:str):
     # Make sure that the ComfyUI API is available
-    check_server(
-        f"http://{COMFY_HOST}",
-        COMFY_API_AVAILABLE_MAX_RETRIES,
-        COMFY_API_AVAILABLE_INTERVAL_MS,
-    )
-    data = json.dumps({"gitUrl": git_url}).encode("utf-8")
+    try:
+        check_server(
+            f"http://{COMFY_HOST}",
+            COMFY_API_AVAILABLE_MAX_RETRIES,
+            COMFY_API_AVAILABLE_INTERVAL_MS,
+        )
+        query_params = urllib.parse.urlencode({'url': git_url})
+        url = f"http://{COMFY_HOST}/customnode/install/git_url?{query_params}"
+        print(f"comfyui-manager install request: {url}")
+        clear_except_allowed_folder(f'{COMFYUI_PATH}/custom_nodes', ['ComfyUI-Manager'])
+        time_before = time.perf_counter()
+        resp = requests.get(url)
+        print(f"comfyui-manager install response: {resp.text}")
+        time_after = time.perf_counter()
 
-    req = urllib.request.Request(f"http://{COMFY_HOST}/scanner/scan_git_url", data=data)
-    resp = json.loads(urllib.request.urlopen(req).read())
-    print(f"scanner git url response: {resp}")
-    restart()
-    check_server(
-        f"http://{COMFY_HOST}",
-        COMFY_API_AVAILABLE_MAX_RETRIES,
-        COMFY_API_AVAILABLE_INTERVAL_MS,
-    )
-    return resp
-
+        restart()
+        check_server(
+            f"http://{COMFY_HOST}",
+            COMFY_API_AVAILABLE_MAX_RETRIES,
+            COMFY_API_AVAILABLE_INTERVAL_MS,
+        )
+    except Exception as e:
+        return {"error": f"Error queuing workflow: {str(e)}"}
+    
+    return {"install_time": time_after - time_before, "success": 200}
 
 def handler(job):
     print(f"handler received job {job}")
@@ -356,11 +367,6 @@ def handler(job):
     result = {**images_result, "refresh_worker": REFRESH_WORKER}
 
     return result
-
-import subprocess
-import os
-import signal
-import threading
 
 # Global variable to track the subprocess status
 is_subprocess_running = False
