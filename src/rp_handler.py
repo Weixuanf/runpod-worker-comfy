@@ -387,13 +387,13 @@ def start_comfyui_subprocess():
         return
 
     # Define the environment variables for the subprocess
-    env_vars = {}
+    env_vars = os.environ.copy()
     # Set a specific environment variable for the subprocess
     env_vars["LD_PRELOAD"] = "path_to_libtcmalloc.so"  # Update this path as necessary
 
     # Start the subprocess and redirect its output and error
     subprocess_handle = subprocess.Popen(
-        ["python3", "/comfyui/main.py", "--disable-auto-launch", "--disable-metadata"],
+        ["python3", "comfyui/main.py", "--disable-auto-launch", "--disable-metadata"],
         env=env_vars,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -409,7 +409,7 @@ def start_comfyui_subprocess():
     stdout_thread.start()
     stderr_thread.start()
 
-def stop_subprocess():
+def stop_comfyui_subprocess():
     global is_subprocess_running
     global subprocess_handle
     
@@ -429,12 +429,12 @@ def stop_subprocess():
 
 def restart():
     print("Restarting the subprocess...")
-    stop_subprocess()
+    stop_comfyui_subprocess()
     start_comfyui_subprocess()
 
 def start_aiohttp_server_subprocess():
     aiohttp_server_subprocess_handle = subprocess.Popen(
-        ["python3",  "app/server.py"],
+        ["python3",  "-u", "app/server.py"],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         bufsize=1,
@@ -448,12 +448,13 @@ def start_aiohttp_server_subprocess():
     stdout_thread.start()
     stderr_thread.start()
 
-# Start the handler only if this script is run directly
-if __name__ == "__main__":
-    print("main.py Starting aiohttp server...")
-    start_aiohttp_server_subprocess()
+from dotenv import load_dotenv
+load_dotenv()
 
+if __name__ == "__main__":
+    print("env vars", os.environ.get("GITHUB_API_KEY"))
     print("Starting comfyui...")
     start_comfyui_subprocess()
-
+    print("main.py Starting aiohttp server...")
+    start_aiohttp_server_subprocess()
     runpod.serverless.start({"handler": handler})

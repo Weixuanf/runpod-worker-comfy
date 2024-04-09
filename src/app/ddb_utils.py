@@ -5,19 +5,9 @@ import boto3
 from githubUtils import get_github_repo_stars
 import json
 
-# aws_access_key_id = os.environ.get('AWS_ACCESS_KEY_ID')
-# aws_secret_access_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
-# aws_region = os.environ.get('AWS_REGION')
-
-# if not aws_access_key_id or not aws_secret_access_key:
-#     print("!!!!Missing AWS credentials")
-#     raise ValueError("Missing AWS credentials")
-
-print("😂 ddbutils")
-node_table_name = "ComfyNode" + os.environ.get('DDB_TABLE_POSTFIX', "")# DDB_TABLE_CUSTOM_NODE
+node_table_name = "ComfyNode" + os.environ.get('DDB_TABLE_POSTFIX', "")
 package_table_name = "ComfyNodePackage" + os.environ.get('DDB_TABLE_POSTFIX', "")
 
-# Initialize a DynamoDB client
 try:
     dynamodb = boto3.resource(
         'dynamodb'
