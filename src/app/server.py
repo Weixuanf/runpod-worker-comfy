@@ -1,5 +1,4 @@
 import asyncio
-import aiohttp
 from aiohttp import web
 from ddb_utils import put_node_package_ddb, put_node_ddb
 
@@ -24,7 +23,7 @@ async def start_server():
     site = web.TCPSite(runner, 'localhost', 1234)
     await site.start()
 
-    print("Server started. Press Ctrl+C to stop.")
+    print("Server started at http://localhost:1234")
     await asyncio.Event().wait()
 
 if __name__ == '__main__':

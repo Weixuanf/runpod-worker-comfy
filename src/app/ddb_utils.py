@@ -2,7 +2,6 @@ from githubUtils import download_and_upload_to_s3, get_github_repo_stars
 import datetime
 import os 
 import boto3
-from githubUtils import get_github_repo_stars
 import json
 
 node_table_name = "ComfyNode" + os.environ.get('DDB_TABLE_POSTFIX', "")
@@ -15,7 +14,7 @@ try:
     ddb_node_table = dynamodb.Table(node_table_name)
     ddb_package_table = dynamodb.Table(package_table_name)
 except Exception as e:
-    print(e)
+    print("❌❌ Error in ddb_utils",e)
 
 #####v2######
 def put_node_package_ddb(item):

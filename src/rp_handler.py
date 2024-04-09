@@ -12,6 +12,9 @@ from app.clearCustomNodesFolder import clear_except_allowed_folder
 import subprocess
 import signal
 import threading
+from dotenv import load_dotenv
+# load_dotenv()
+from app.update_node_package_install_time import update_node_package_install_time
 
 # Time to wait between API check attempts in milliseconds
 COMFY_API_AVAILABLE_INTERVAL_MS = 50
@@ -291,8 +294,7 @@ def scanner_git_url(git_url:str):
         clear_except_allowed_folder(f'{COMFYUI_PATH}/custom_nodes', ['ComfyUI-Manager'])
         time_before = time.perf_counter()
         resp = requests.get(url)
-        print(f"comfyui-manager install response: {resp.text}")
-        time_after = time.perf_counter()
+        install_time = time.perf_counter() - time_before
 
         restart()
         check_server(
@@ -300,10 +302,11 @@ def scanner_git_url(git_url:str):
             COMFY_API_AVAILABLE_MAX_RETRIES,
             COMFY_API_AVAILABLE_INTERVAL_MS,
         )
+        update_node_package_install_time(git_url, install_time)
     except Exception as e:
-        return {"error": f"Error queuing workflow: {str(e)}"}
+        return {"error": f"Error scan git url: {str(e)}"}
     
-    return {"install_time": time_after - time_before, "success": 200}
+    return {"install_time": install_time}
 
 def handler(job):
     print(f"handler received job {job}")
@@ -393,13 +396,13 @@ def start_comfyui_subprocess():
         return
 
     # Define the environment variables for the subprocess
-    env_vars = os.environ.copy()
+    env_vars = {}
     # Set a specific environment variable for the subprocess
     env_vars["LD_PRELOAD"] = "path_to_libtcmalloc.so"  # Update this path as necessary
 
     # Start the subprocess and redirect its output and error
     subprocess_handle = subprocess.Popen(
-        ["python3", "comfyui/main.py", "--disable-auto-launch", "--disable-metadata"],
+        ["python3", "-u", "comfyui/main.py", "--disable-auto-launch", "--disable-metadata"],
         env=env_vars,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -440,7 +443,7 @@ def restart():
 
 def start_aiohttp_server_subprocess():
     aiohttp_server_subprocess_handle = subprocess.Popen(
-        ["python3",  "-u", "app/server.py"],
+        ["python3", "-u", "app/server.py"],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         bufsize=1,
@@ -454,13 +457,9 @@ def start_aiohttp_server_subprocess():
     stdout_thread.start()
     stderr_thread.start()
 
-from dotenv import load_dotenv
-load_dotenv()
-
 if __name__ == "__main__":
-    print("env vars", os.environ.get("GITHUB_API_KEY"))
     print("Starting comfyui...")
     start_comfyui_subprocess()
-    print("main.py Starting aiohttp server...")
+    print("Starting aiohttp server...")
     start_aiohttp_server_subprocess()
     runpod.serverless.start({"handler": handler})
