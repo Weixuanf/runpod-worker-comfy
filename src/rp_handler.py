@@ -396,14 +396,14 @@ def start_comfyui_subprocess():
         return
 
     # Define the environment variables for the subprocess
-    env_vars = {}
+    # env_vars = {}
     # Set a specific environment variable for the subprocess
-    env_vars["LD_PRELOAD"] = "path_to_libtcmalloc.so"  # Update this path as necessary
+    # env_vars["LD_PRELOAD"] = "path_to_libtcmalloc.so"  # Update this path as necessary
 
     # Start the subprocess and redirect its output and error
     subprocess_handle = subprocess.Popen(
         ["python3", "-u", "comfyui/main.py", "--disable-auto-launch", "--disable-metadata"],
-        env=env_vars,
+        # env=env_vars,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         bufsize=1,
@@ -461,5 +461,5 @@ if __name__ == "__main__":
     print("Starting comfyui...")
     start_comfyui_subprocess()
     print("Starting aiohttp server...")
-    # start_aiohttp_server_subprocess()
+    start_aiohttp_server_subprocess()
     runpod.serverless.start({"handler": handler})
