@@ -20,7 +20,7 @@ RUN apt-get autoremove -y && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 RUN pip3 install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 
 # Clone ComfyUI repository
-RUN git clone --branch v0.9 --single-branch --depth 1 https://github.com/11cafe/comfyui-online-serverless /comfyui
+RUN git clone --branch v0.10 --single-branch --depth 1 https://github.com/11cafe/comfyui-online-serverless /comfyui
 
 RUN git clone --branch main --single-branch --depth 1 https://github.com/ltdrdata/ComfyUI-Manager /comfyui/custom_nodes/ComfyUI-Manager
 
@@ -29,7 +29,9 @@ WORKDIR /comfyui
 
 # Install ComfyUI dependencies
 RUN pip3 install -r requirements.txt \
-    && pip3 install -r custom_nodes/ComfyUI-Manager/requirements.txt \
+    && pip3 install -r custom_nodes/ComfyUI-Manager/requirements.txt
+
+RUN pip3 install runpod requests boto3
 
 # Download checkpoints/vae/LoRA to include in image
 # RUN wget -O models/checkpoints/sd_xl_base_1.0.safetensors https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors
@@ -46,6 +48,7 @@ WORKDIR /
 
 # Add the start and the handler
 ADD src/start.sh src/rp_handler.py test_input.json ./
+ADD src/app/ /app/
 RUN chmod +x /start.sh
 
 # Start the container

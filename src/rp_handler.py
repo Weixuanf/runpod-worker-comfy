@@ -461,5 +461,5 @@ if __name__ == "__main__":
     print("Starting comfyui...")
     start_comfyui_subprocess()
     print("Starting aiohttp server...")
-    start_aiohttp_server_subprocess()
+    # start_aiohttp_server_subprocess()
     runpod.serverless.start({"handler": handler})

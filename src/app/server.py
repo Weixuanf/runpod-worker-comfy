@@ -20,10 +20,10 @@ async def start_server():
     ])
     runner = web.AppRunner(app)
     await runner.setup()
-    site = web.TCPSite(runner, 'localhost', 1234)
+    site = web.TCPSite(runner, '127.0.0.1', 6233)
     await site.start()
 
-    print("Server started at http://localhost:1234")
+    print("Server started at http://127.0.0.1:6233")
     await asyncio.Event().wait()
 
 if __name__ == '__main__':
