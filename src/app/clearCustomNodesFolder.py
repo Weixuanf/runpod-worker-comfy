@@ -25,7 +25,7 @@ def clear_except_allowed_folder(path, allowedFolders):
         if os.path.isdir(item_path):
             shutil.rmtree(item_path)
             print(f"Removed directory: {item_path}")
-        # If item is a file, remove it
-        else:
-            os.remove(item_path)
-            print(f"Removed file: {item_path}")
+        # Don't remove file
+        # else:
+        #     os.remove(item_path)
+        #     print(f"Removed file: {item_path}")

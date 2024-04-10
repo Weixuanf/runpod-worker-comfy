@@ -35,6 +35,7 @@ def put_node_package_ddb(item):
             'description': repo_data.get('description',''),
             'jsFilePaths': jsFilePaths
         })
+        print('🟢✅Successfully added package item to DynamoDB', item.get('id'))
         return item
     except Exception as e:
         print("❌🔴Error adding package item to DynamoDB:", e)

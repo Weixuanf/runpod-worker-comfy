@@ -14,7 +14,7 @@ try:
 except Exception as e:
     print("❌❌ Error in update_node_pacakge",e)
     
-def update_node_package_install_time(gitUrl:str, install_time:float):
+def update_node_package_install_time(gitUrl:str, install_time:float, restart_success:bool, restart_error: str):
     if gitUrl.endswith('.git'):
         gitUrl = gitUrl[:-4]
     if gitUrl.endswith('/'):
@@ -22,13 +22,18 @@ def update_node_package_install_time(gitUrl:str, install_time:float):
     repo = gitUrl.split('/')[-1]
     username = gitUrl.split('/')[-2]
     packageID = username + '_' + repo
-    response = ddb_package_table.update_item(
-        Key={
-            'id': packageID
-        },
-        UpdateExpression="set installTime = :i",
-        ExpressionAttributeValues={
-            ':i': str(install_time)
-        },
-        ReturnValues="UPDATED_NEW"
-    )
+    try:
+        response = ddb_package_table.update_item(
+            Key={
+                'id': packageID
+            },
+            UpdateExpression="set installTime = :i, restartSuccess = :r, restartError = :e",
+            ExpressionAttributeValues={
+                ':i': str(install_time),
+                ':r': restart_success,
+                ':e': restart_error if len(restart_error) > 0 else None
+            },
+            ReturnValues="UPDATED_NEW"
+        )
+    except Exception as e:
+        print("❌❌ Error in update_node_pacakge",e)

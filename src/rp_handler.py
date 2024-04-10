@@ -13,7 +13,7 @@ import subprocess
 import signal
 import threading
 from dotenv import load_dotenv
-# load_dotenv()
+load_dotenv()
 from app.update_node_package_install_time import update_node_package_install_time
 
 # Time to wait between API check attempts in milliseconds
@@ -280,29 +280,34 @@ def process_output_images(outputs, job_id):
             "message": f"the image does not exist in the specified output folder: {local_image_path}",
         }
 
+restart_error = ""
 def scanner_git_url(git_url:str):
     # Make sure that the ComfyUI API is available
     try:
-        check_server(
+        clear_except_allowed_folder(f'{COMFYUI_PATH}/custom_nodes', ['ComfyUI-Manager'])
+        restart()
+        is_online = check_server(
             f"http://{COMFY_HOST}",
             COMFY_API_AVAILABLE_MAX_RETRIES,
             COMFY_API_AVAILABLE_INTERVAL_MS,
         )
+        if not is_online:
+            return {"error": "ComfyUI API is not available, please try again later."}
         query_params = urllib.parse.urlencode({'url': git_url})
         url = f"http://{COMFY_HOST}/customnode/install/git_url?{query_params}"
         print(f"comfyui-manager install request: {url}")
-        clear_except_allowed_folder(f'{COMFYUI_PATH}/custom_nodes', ['ComfyUI-Manager'])
         time_before = time.perf_counter()
         resp = requests.get(url)
         install_time = time.perf_counter() - time_before
-
+        global restart_error
+        restart_error = ""
         restart()
-        check_server(
+        is_online = check_server(
             f"http://{COMFY_HOST}",
             COMFY_API_AVAILABLE_MAX_RETRIES,
             COMFY_API_AVAILABLE_INTERVAL_MS,
         )
-        update_node_package_install_time(git_url, install_time)
+        update_node_package_install_time(git_url, install_time, is_online, restart_error)
     except Exception as e:
         return {"error": f"Error scan git url: {str(e)}"}
     
@@ -376,16 +381,20 @@ is_subprocess_running = False
 # Subprocess handle
 subprocess_handle = None
 
-def stream_output(process, stream_type):
+def stream_output(process, stream_type, logError=False):
     """
     Forward the output of the subprocess to the console.
     
     :param process: The subprocess handle
     :param stream_type: Type of the stream ('stdout' or 'stderr')
     """
+    global restart_error
     stream = process.stdout if stream_type == 'stdout' else process.stderr
     for line in iter(stream.readline, ''):
         print(line.strip())
+        if stream_type == 'stderr':
+            # Append errors to the global string, separating them with a newline character
+            restart_error += line.strip() + "\n"
 
 def start_comfyui_subprocess():
     global is_subprocess_running
@@ -423,9 +432,9 @@ def stop_comfyui_subprocess():
     global subprocess_handle
     
     if subprocess_handle:
-        # Terminate the subprocess
-        subprocess_handle.terminate()
         try:
+            # Terminate the subprocess
+            subprocess_handle.terminate()
             # Wait for the subprocess to terminate
             subprocess_handle.wait(timeout=5)
         except subprocess.TimeoutExpired:
