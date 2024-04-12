@@ -13,7 +13,8 @@ RUN apt-get update && apt-get install -y \
     python3.10 \
     python3-pip \
     git \
-    wget
+    wget \
+    libgl1
 
 # Clean up to reduce image size
 RUN apt-get autoremove -y && apt-get clean -y && rm -rf /var/lib/apt/lists/*
