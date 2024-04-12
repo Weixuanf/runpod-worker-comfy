@@ -302,10 +302,11 @@ def scanner_git_url(git_url:str):
         global restart_error
         restart_error = ""
         restart()
+        # 100s long wait cuz upload js files to s3 takes long time for some package
         is_online = check_server(
             f"http://{COMFY_HOST}",
-            COMFY_API_AVAILABLE_MAX_RETRIES,
-            COMFY_API_AVAILABLE_INTERVAL_MS,
+            100,
+            1000,
         )
         update_node_package_install_time(git_url, install_time, is_online, restart_error)
     except Exception as e:
