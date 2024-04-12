@@ -14,14 +14,15 @@ RUN apt-get update && apt-get install -y \
     python3-pip \
     git \
     wget \
-    libgl1
+    libgl1 \
+    libglib2.0-0
 
 # Clean up to reduce image size
 RUN apt-get autoremove -y && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 RUN pip3 install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 
 # Clone ComfyUI repository
-RUN git clone --branch v1.1 --single-branch --depth 1 https://github.com/11cafe/comfyui-online-serverless /comfyui
+RUN git clone --branch dev --single-branch --depth 1 https://github.com/11cafe/comfyui-online-serverless /comfyui
 
 RUN git clone --branch main --single-branch --depth 1 https://github.com/ltdrdata/ComfyUI-Manager /comfyui/custom_nodes/ComfyUI-Manager
 
