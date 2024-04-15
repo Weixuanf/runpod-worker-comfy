@@ -311,7 +311,7 @@ def scanner_git_url(git_url:str):
     except Exception as e:
         return {"error": f"Error scan git url: {str(e)}"}
     
-    return {"install_time": install_time}
+    return {"install_time": install_time, "restart_success": is_online}
 
 def handler(job):
     print(f"handler received job {job}")
