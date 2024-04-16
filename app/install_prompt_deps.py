@@ -1,19 +1,23 @@
+import json
 import os
-
+import subprocess
+import signal
+import threading
 import requests
-from common import MODEL_PATHS,COMFY_HOST_URL
-from manager_copy import run_script
+from .common import MODEL_PATHS,COMFY_HOST_URL,CONTAINER_ROOT
+from .manager_copy import run_script
 
-DISK_MODEL_PATH = '/models'
+DISK_MODEL_PATH = 'models'
 
 try:
-    os.makedirs(DISK_MODEL_PATH, exist_ok=True)
+    os.makedirs(os.path.join(CONTAINER_ROOT, DISK_MODEL_PATH), exist_ok=True)
 except Exception as e:
     print('❌❌ Error creating /models folder',e)
 
-civitai_token = os.getenv('CIVITAI_API_KEY')
+civitai_token = os.environ.get('CIVITAI_API_KEY',"none")
 
-def install_prompt_deps(prompt:str,deps):
+def install_prompt_deps(prompt,deps):
+    print('🔍🔍install_prompt_deps')
     models = deps.get('models')
     if models:
         for filename in models:
@@ -32,10 +36,45 @@ def install_prompt_deps(prompt:str,deps):
                 hash_filename = os.path.join(model_path, folderName, filehash + extension)
                 print('🔍🔍filehash filename',hash_filename)
                 if os.path.exists(hash_filename):
-                    print(f"👌Model file {hash_filename} exists")
+                    print(f"👌Model file {filename} exists in {hash_filename}")
+                    for key in prompt:
+                        prompt_node = prompt[key]
+                        inputs = prompt_node.get('inputs')
+                        if inputs:
+                            for key in inputs:
+                                if inputs[key] == filename:
+                                    inputs[key] = hash_filename
                 else:
-                    run_script(['wget', '-O',f'{DISK_MODEL_PATH}/{filename}', download_url])
-                prompt.replace(filename,hash_filename)
+                    start_subprocess(['wget','-O',f'{DISK_MODEL_PATH}/{filename}', download_url, '--progress=bar:force'])
+
     # refresh server file lists
     requests.get(f'{COMFY_HOST_URL}/object_info')
+    return prompt
                 
+
+def stream_output(process, stream_type, logError=False):
+    stream = process.stdout if stream_type == 'stdout' else process.stderr
+    count = 0
+    for line in iter(stream.readline, ''):
+        if count < 10 or count % 10 == 0: 
+            print(line.strip())
+        count = count + 1
+
+def start_subprocess(cmd):
+    # Start the subprocess and redirect its output and error
+    subprocess_handle = subprocess.Popen(
+        cmd,
+        # env=env_vars,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        bufsize=1,
+        universal_newlines=True,
+        text=True
+    )
+    is_subprocess_running = True
+
+    # Start threads to read the subprocess's output and error streams
+    stdout_thread = threading.Thread(target=stream_output, args=(subprocess_handle, 'stdout'))
+    stderr_thread = threading.Thread(target=stream_output, args=(subprocess_handle, 'stderr'))
+    stdout_thread.start()
+    stderr_thread.start()

@@ -11,9 +11,8 @@ import subprocess
 import time
 import git
 from git.remote import RemoteProgress
-
-comfy_path = '/comfyui'
-custom_nodes_path = os.path.join(comfy_path, "custom_nodes")
+from .common import COMFYUI_PATH
+custom_nodes_path = os.path.join(COMFYUI_PATH, "custom_nodes")
 
 class GitProgress(RemoteProgress):
     def __init__(self):

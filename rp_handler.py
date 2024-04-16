@@ -9,28 +9,12 @@ import requests
 import base64
 from io import BytesIO
 from app.clearCustomNodesFolder import clear_except_allowed_folder
-import subprocess
-import signal
-import threading
 from dotenv import load_dotenv
+from app.comfy_subprocess import restart, start_aiohttp_server_subprocess, start_comfyui_subprocess
 from app.install_prompt_deps import install_prompt_deps
 load_dotenv()
 from app.update_node_package_install_time import update_node_package_install_time
-from app.common import COMFY_HOST, COMFYUI_PATH
-
-# Time to wait between API check attempts in milliseconds
-COMFY_API_AVAILABLE_INTERVAL_MS = 50
-# Maximum number of API check attempts
-COMFY_API_AVAILABLE_MAX_RETRIES = 500
-# Time to wait between poll attempts in milliseconds
-COMFY_POLLING_INTERVAL_MS = 250
-# Maximum number of poll attempts
-COMFY_POLLING_MAX_RETRIES = 500
-# Host where ComfyUI is running
-# Enforce a clean state after each job is done
-# see https://docs.runpod.io/docs/handler-additional-controls#refresh-worker
-REFRESH_WORKER = os.environ.get("REFRESH_WORKER", "false").lower() == "true"
-
+from app.common import COMFY_API_AVAILABLE_INTERVAL_MS, COMFY_HOST, COMFY_POLLING_INTERVAL_MS, COMFYUI_PATH, COMFYUI_PORT, IS_SCANNER_WORKER, COMFY_POLLING_MAX_RETRIES, COMFY_API_AVAILABLE_MAX_RETRIES, REFRESH_WORKER, restart_error
 
 def validate_input(job_input):
     """
@@ -49,29 +33,19 @@ def validate_input(job_input):
 
     # Check if input is a string and try to parse it as JSON
     if isinstance(job_input, str):
+        print('⛔️⛔️☢️job_input is a string')
         try:
             job_input = json.loads(job_input)
         except json.JSONDecodeError:
             return None, "Invalid JSON format in input"
 
     # Validate 'workflow' in input
-    workflow = job_input.get("workflow")
+    workflow = job_input.get("prompt")
     if workflow is None:
         return None, "Missing 'workflow' parameter"
 
-    # Validate 'images' in input, if provided
-    images = job_input.get("images")
-    if images is not None:
-        if not isinstance(images, list) or not all(
-            "name" in image and "image" in image for image in images
-        ):
-            return (
-                None,
-                "'images' must be a list of objects with 'name' and 'image' keys",
-            )
-
     # Return validated data and no error
-    return {"workflow": workflow, "images": images}, None
+    return job_input, None
 
 
 def check_server(url, retries=50, delay=500):
@@ -280,7 +254,6 @@ def process_output_images(outputs, job_id):
             "message": f"the image does not exist in the specified output folder: {local_image_path}",
         }
 
-restart_error = ""
 def scanner_git_url(git_url:str):
     # Make sure that the ComfyUI API is available
     try:
@@ -311,11 +284,11 @@ def scanner_git_url(git_url:str):
     except Exception as e:
         return {"error": f"Error scan git url: {str(e)}"}
     
-    return {"install_time": install_time, "restart_success": is_online}
+    return {"install_time": install_time, "restart_success": is_online, "refresh_worker": True}
     
 
 def handler(job):
-    print(f"handler received job {job}")
+    print(f"🧪🧪handler received job")
     job_input = job["input"]
 
     if(job_input.get("scannerGitUrl")):
@@ -327,22 +300,23 @@ def handler(job):
         return {"error": error_message}
 
     # Extract validated data
-    workflow = validated_data["workflow"]
+    prompt = validated_data["prompt"]
     deps = validated_data.get("deps")
     # Make sure that the ComfyUI API is available
-    check_server(
-        f"http://{COMFY_HOST}",
-        COMFY_API_AVAILABLE_MAX_RETRIES,
-        COMFY_API_AVAILABLE_INTERVAL_MS,
-    )
+    # check_server(
+    #     f"http://{COMFY_HOST}",
+    #     COMFY_API_AVAILABLE_MAX_RETRIES,
+    #     COMFY_API_AVAILABLE_INTERVAL_MS,
+    # )
     if deps:
-        install_prompt_deps(deps)
+        print('has deps!!!')
+        prompt = install_prompt_deps(prompt, deps)
 
     # Queue the workflow
     try:
-        queued_workflow = queue_workflow(workflow)
+        queued_workflow = queue_workflow(prompt)
         prompt_id = queued_workflow["prompt_id"]
-        print(f"runpod-worker-comfy - queued workflow with ID {prompt_id}")
+        print(f"runpod-worker-comfy queued workflow with ID {prompt_id}")
     except Exception as e:
         return {"error": f"Error queuing workflow: {str(e)}"}
 
@@ -372,99 +346,10 @@ def handler(job):
 
     return result
 
-# Global variable to track the subprocess status
-is_subprocess_running = False
-# Subprocess handle
-subprocess_handle = None
-
-def stream_output(process, stream_type, logError=False):
-    """
-    Forward the output of the subprocess to the console.
-    
-    :param process: The subprocess handle
-    :param stream_type: Type of the stream ('stdout' or 'stderr')
-    """
-    global restart_error
-    stream = process.stdout if stream_type == 'stdout' else process.stderr
-    for line in iter(stream.readline, ''):
-        print(line.strip())
-        if stream_type == 'stderr':
-            # Append errors to the global string, separating them with a newline character
-            restart_error += line.strip() + "\n"
-
-def start_comfyui_subprocess():
-    global is_subprocess_running
-    global subprocess_handle
-    
-    if is_subprocess_running:
-        print("Subprocess is already running.")
-        return
-
-    # Define the environment variables for the subprocess
-    # env_vars = {}
-    # Set a specific environment variable for the subprocess
-    # env_vars["LD_PRELOAD"] = "path_to_libtcmalloc.so"  # Update this path as necessary
-
-    # Start the subprocess and redirect its output and error
-    subprocess_handle = subprocess.Popen(
-        ["python3", "-u", "comfyui/main.py", "--disable-auto-launch", "--disable-metadata"],
-        # env=env_vars,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        bufsize=1,
-        universal_newlines=True,
-        text=True
-    )
-    is_subprocess_running = True
-
-    # Start threads to read the subprocess's output and error streams
-    stdout_thread = threading.Thread(target=stream_output, args=(subprocess_handle, 'stdout'))
-    stderr_thread = threading.Thread(target=stream_output, args=(subprocess_handle, 'stderr'))
-    stdout_thread.start()
-    stderr_thread.start()
-
-def stop_comfyui_subprocess():
-    global is_subprocess_running
-    global subprocess_handle
-    
-    if subprocess_handle:
-        try:
-            # Terminate the subprocess
-            subprocess_handle.terminate()
-            # Wait for the subprocess to terminate
-            subprocess_handle.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            # Force kill if not terminated within timeout
-            os.kill(subprocess_handle.pid, signal.SIGKILL)
-        finally:
-            subprocess_handle = None
-            is_subprocess_running = False
-            print("Subprocess stopped.")
-
-def restart():
-    print("Restarting the subprocess...")
-    stop_comfyui_subprocess()
-    start_comfyui_subprocess()
-
-def start_aiohttp_server_subprocess():
-    aiohttp_server_subprocess_handle = subprocess.Popen(
-        ["python3", "-u", "app/server.py"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        bufsize=1,
-        universal_newlines=True,
-        text=True
-    )
-
-    # Start threads to read the aiohttp server subprocess's output and error streams
-    stdout_thread = threading.Thread(target=stream_output, args=(aiohttp_server_subprocess_handle, 'stdout'))
-    stderr_thread = threading.Thread(target=stream_output, args=(aiohttp_server_subprocess_handle, 'stderr'))
-    stdout_thread.start()
-    stderr_thread.start()
-
 if __name__ == "__main__":
     print("Starting comfyui...")
     start_comfyui_subprocess()
-    print("Starting aiohttp server...")
-    start_aiohttp_server_subprocess()
+    if IS_SCANNER_WORKER: 
+        print("Starting aiohttp server...")
+        start_aiohttp_server_subprocess()
     runpod.serverless.start({"handler": handler})

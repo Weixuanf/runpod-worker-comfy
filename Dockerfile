@@ -49,9 +49,9 @@ RUN pip3 install runpod requests boto3
 WORKDIR /
 
 # Add the start and the handler
-ADD src/start.sh src/rp_handler.py test_input.json ./
-ADD src/app/ /app/
-RUN python3 app/install_custom_nodes.py
+ADD start.sh rp_handler.py test_input.json install_custom_nodes.py ./
+ADD app/ /app/
+RUN python3 install_custom_nodes.py
 RUN chmod +x /start.sh
 
 # Start the container
