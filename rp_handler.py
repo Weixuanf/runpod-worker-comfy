@@ -14,7 +14,7 @@ from app.comfy_subprocess import restart, start_aiohttp_server_subprocess, start
 from app.install_prompt_deps import install_prompt_deps
 load_dotenv()
 from app.update_node_package_install_time import update_node_package_install_time
-from app.common import COMFY_API_AVAILABLE_INTERVAL_MS, COMFY_HOST, COMFY_POLLING_INTERVAL_MS, COMFYUI_PATH, COMFYUI_PORT, IS_SCANNER_WORKER, COMFY_POLLING_MAX_RETRIES, COMFY_API_AVAILABLE_MAX_RETRIES, REFRESH_WORKER, restart_error
+from app.common import COMFY_API_AVAILABLE_INTERVAL_MS, COMFY_HOST, COMFY_HOST_URL, COMFY_POLLING_INTERVAL_MS, COMFYUI_PATH, COMFYUI_PORT, IS_SCANNER_WORKER, COMFY_POLLING_MAX_RETRIES, COMFY_API_AVAILABLE_MAX_RETRIES, REFRESH_WORKER, restart_error
 
 def validate_input(job_input):
     """
@@ -33,7 +33,6 @@ def validate_input(job_input):
 
     # Check if input is a string and try to parse it as JSON
     if isinstance(job_input, str):
-        print('⛔️⛔️☢️job_input is a string')
         try:
             job_input = json.loads(job_input)
         except json.JSONDecodeError:
@@ -302,15 +301,18 @@ def handler(job):
     # Extract validated data
     prompt = validated_data["prompt"]
     deps = validated_data.get("deps")
-    # Make sure that the ComfyUI API is available
-    # check_server(
-    #     f"http://{COMFY_HOST}",
-    #     COMFY_API_AVAILABLE_MAX_RETRIES,
-    #     COMFY_API_AVAILABLE_INTERVAL_MS,
-    # )
     if deps:
-        print('has deps!!!')
         prompt = install_prompt_deps(prompt, deps)
+    # Make sure that the ComfyUI API is available
+    server_online = check_server(
+        f"http://{COMFY_HOST}",
+        30, # 15sec
+        500,
+    )
+    if not server_online:
+        return {"error": "ComfyUI API is not available, please try again later."}
+    # refresh server file lists
+    requests.get(f'{COMFY_HOST_URL}/object_info')
 
     # Queue the workflow
     try:

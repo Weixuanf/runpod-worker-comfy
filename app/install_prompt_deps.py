@@ -17,7 +17,6 @@ except Exception as e:
 civitai_token = os.environ.get('CIVITAI_API_KEY',"none")
 
 def install_prompt_deps(prompt,deps):
-    print('🔍🔍install_prompt_deps')
     models = deps.get('models')
     if models:
         for filename in models:
@@ -31,12 +30,15 @@ def install_prompt_deps(prompt,deps):
                 raise ValueError('download_url not supported',download_url)
             if not filehash or not folderName or not download_url:
                 raise ValueError('filehash or folderName or download_url not found in model',model)
+            model_exists = False
             for model_path in MODEL_PATHS:
                 base_name, extension = os.path.splitext(filename)
                 hash_filename = os.path.join(model_path, folderName, filehash + extension)
-                print('🔍🔍filehash filename',hash_filename)
+                print(f"hashed filepath: {hash_filename}")
                 if os.path.exists(hash_filename):
                     print(f"👌Model file {filename} exists in {hash_filename}")
+                    model_exists = True
+                    # update the prompt with the hash_filename
                     for key in prompt:
                         prompt_node = prompt[key]
                         inputs = prompt_node.get('inputs')
@@ -44,11 +46,9 @@ def install_prompt_deps(prompt,deps):
                             for key in inputs:
                                 if inputs[key] == filename:
                                     inputs[key] = hash_filename
-                else:
-                    start_subprocess(['wget','-O',f'{DISK_MODEL_PATH}/{filename}', download_url, '--progress=bar:force'])
-
-    # refresh server file lists
-    requests.get(f'{COMFY_HOST_URL}/object_info')
+            if not model_exists:
+                print(f"⬇️Start downloading {filename} from {download_url}")
+                start_subprocess(['wget','-O',f'{DISK_MODEL_PATH}/{filename}', download_url, '--progress=bar:force'])
     return prompt
                 
 
@@ -71,10 +71,15 @@ def start_subprocess(cmd):
         universal_newlines=True,
         text=True
     )
-    is_subprocess_running = True
 
     # Start threads to read the subprocess's output and error streams
     stdout_thread = threading.Thread(target=stream_output, args=(subprocess_handle, 'stdout'))
     stderr_thread = threading.Thread(target=stream_output, args=(subprocess_handle, 'stderr'))
     stdout_thread.start()
     stderr_thread.start()
+    # Wait for the subprocess to complete
+    subprocess_handle.wait()
+
+    # Wait also for all output to be processed (output threads to complete)
+    stdout_thread.join()
+    stderr_thread.join()
