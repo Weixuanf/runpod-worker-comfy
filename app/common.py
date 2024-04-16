@@ -1,0 +1,4 @@
+COMFYUI_PATH = '/comfyui'
+MODEL_PATHS = [f'{COMFYUI_PATH}/models']
+COMFY_HOST = "127.0.0.1:8188"
+COMFY_HOST_URL = f"http://{COMFY_HOST}"

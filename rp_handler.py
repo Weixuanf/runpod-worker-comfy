@@ -13,8 +13,10 @@ import subprocess
 import signal
 import threading
 from dotenv import load_dotenv
+from app.install_prompt_deps import install_prompt_deps
 load_dotenv()
 from app.update_node_package_install_time import update_node_package_install_time
+from app.common import COMFY_HOST, COMFYUI_PATH
 
 # Time to wait between API check attempts in milliseconds
 COMFY_API_AVAILABLE_INTERVAL_MS = 50
@@ -25,8 +27,6 @@ COMFY_POLLING_INTERVAL_MS = 250
 # Maximum number of poll attempts
 COMFY_POLLING_MAX_RETRIES = 500
 # Host where ComfyUI is running
-COMFY_HOST = "127.0.0.1:8188"
-COMFYUI_PATH = 'comfyui'
 # Enforce a clean state after each job is done
 # see https://docs.runpod.io/docs/handler-additional-controls#refresh-worker
 REFRESH_WORKER = os.environ.get("REFRESH_WORKER", "false").lower() == "true"
@@ -312,6 +312,7 @@ def scanner_git_url(git_url:str):
         return {"error": f"Error scan git url: {str(e)}"}
     
     return {"install_time": install_time, "restart_success": is_online}
+    
 
 def handler(job):
     print(f"handler received job {job}")
@@ -327,20 +328,15 @@ def handler(job):
 
     # Extract validated data
     workflow = validated_data["workflow"]
-    images = validated_data.get("images")
-
+    deps = validated_data.get("deps")
     # Make sure that the ComfyUI API is available
     check_server(
         f"http://{COMFY_HOST}",
         COMFY_API_AVAILABLE_MAX_RETRIES,
         COMFY_API_AVAILABLE_INTERVAL_MS,
     )
-
-    # Upload images if they exist
-    upload_result = upload_images(images)
-
-    if upload_result["status"] == "error":
-        return upload_result
+    if deps:
+        install_prompt_deps(deps)
 
     # Queue the workflow
     try:

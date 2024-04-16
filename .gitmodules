@@ -1,3 +1,6 @@
 [submodule "src/comfyui"]
 	path = src/comfyui
 	url = https://github.com/11cafe/comfyui-online-serverless.git
+[submodule "comfyui"]
+	path = comfyui
+	url = https://github.com/11cafe/comfyui-online-serverless.git

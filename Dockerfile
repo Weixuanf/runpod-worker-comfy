@@ -22,7 +22,7 @@ RUN apt-get autoremove -y && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 RUN pip3 install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 
 # Clone ComfyUI repository
-RUN git clone --branch dev --single-branch --depth 1 https://github.com/11cafe/comfyui-online-serverless /comfyui
+RUN git clone --branch master --single-branch --depth 1 https://github.com/comfyanonymous/ComfyUI /comfyui
 
 RUN git clone --branch main --single-branch --depth 1 https://github.com/ltdrdata/ComfyUI-Manager /comfyui/custom_nodes/ComfyUI-Manager
 
@@ -51,6 +51,7 @@ WORKDIR /
 # Add the start and the handler
 ADD src/start.sh src/rp_handler.py test_input.json ./
 ADD src/app/ /app/
+RUN python3 app/install_custom_nodes.py
 RUN chmod +x /start.sh
 
 # Start the container
