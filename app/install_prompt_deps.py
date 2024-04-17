@@ -1,7 +1,7 @@
 import os
 import subprocess
 import threading
-from .common import MODEL_PATHS,COMFY_HOST_URL,CONTAINER_ROOT,COMFYUI_PATH
+from .common import MODEL_PATHS,COMFYUI_PATH
 
 DISK_MODEL_PATH = os.path.join(COMFYUI_PATH, 'models')
 

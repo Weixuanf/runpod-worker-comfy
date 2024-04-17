@@ -51,7 +51,7 @@ WORKDIR /
 # Add the start and the handler
 ADD start.sh rp_handler.py test_input.json install_custom_nodes.py ./
 ADD app/ /app/
-RUN python3 install_custom_nodes.py
+# RUN python3 install_custom_nodes.py
 RUN chmod +x /start.sh
 
 # Start the container

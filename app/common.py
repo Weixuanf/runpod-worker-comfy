@@ -1,6 +1,7 @@
 import os
 CONTAINER_ROOT = os.path.dirname(os.path.dirname(__file__))
-COMFYUI_PATH = os.path.join(CONTAINER_ROOT, 'comfyui')
+# COMFYUI_PATH = os.path.join(CONTAINER_ROOT, 'comfyui')
+COMFYUI_PATH = os.environ.get("COMFYUI_PATH", "/workspace/comfyui_0.1")  #network volume
 print(f'👉COMFYUI_PATH: {COMFYUI_PATH}')
 COMFYUI_PORT = "8080"
 MODEL_PATHS = [f'{COMFYUI_PATH}/models']
