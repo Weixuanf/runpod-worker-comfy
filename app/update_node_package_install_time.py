@@ -1,7 +1,6 @@
 import boto3
 import os
 
-
 node_table_name = "ComfyNode" + os.environ.get('DDB_TABLE_POSTFIX', "")
 package_table_name = "ComfyNodePackage" + os.environ.get('DDB_TABLE_POSTFIX', "")
 

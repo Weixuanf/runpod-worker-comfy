@@ -13,7 +13,6 @@ from dotenv import load_dotenv
 from app.comfy_subprocess import restart, start_aiohttp_server_subprocess, start_comfyui_subprocess
 from app.install_prompt_deps import install_prompt_deps
 load_dotenv()
-from app.update_node_package_install_time import update_node_package_install_time
 from app.common import COMFY_API_AVAILABLE_INTERVAL_MS, COMFY_HOST, COMFY_HOST_URL, COMFY_POLLING_INTERVAL_MS, COMFYUI_PATH, COMFYUI_PORT, IS_SCANNER_WORKER, COMFY_POLLING_MAX_RETRIES, COMFY_API_AVAILABLE_MAX_RETRIES, REFRESH_WORKER, restart_error
 
 def validate_input(job_input):
@@ -279,6 +278,7 @@ def scanner_git_url(git_url:str):
             100,
             1000,
         )
+        from app.update_node_package_install_time import update_node_package_install_time
         update_node_package_install_time(git_url, install_time, is_online, restart_error)
     except Exception as e:
         return {"error": f"Error scan git url: {str(e)}"}
