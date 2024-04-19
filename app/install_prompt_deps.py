@@ -1,6 +1,7 @@
 import os
 import subprocess
 import threading
+from .logUtils import append_comfyui_log
 from .common import MODEL_PATHS,COMFYUI_PATH
 
 DISK_MODEL_PATH = os.path.join(COMFYUI_PATH, 'models')
@@ -31,6 +32,7 @@ def install_prompt_deps(prompt,deps):
             hash_file_path = os.path.join(DISK_MODEL_PATH, folderName, filehash + extension)
             print(f"⬇️Start downloading from {download_url} to {hash_file_path}")
             start_subprocess(['wget','-O',hash_file_path, download_url, '--progress=bar:force'])
+            
         # update the prompt with the hash_file_path
         for key in prompt:
             prompt_node = prompt[key]
@@ -47,8 +49,9 @@ def stream_output(process, stream_type, logError=False):
     stream = process.stdout if stream_type == 'stdout' else process.stderr
     count = 0
     for line in iter(stream.readline, ''):
-        if count < 10 or count % 10 == 0: 
+        if count < 10 or count % 80 == 0: 
             print(line.strip())
+            append_comfyui_log(line.strip())
         count = count + 1
 
 def start_subprocess(cmd):

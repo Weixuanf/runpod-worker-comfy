@@ -5,14 +5,15 @@ rm -rf /workspace && \
   ln -s /runpod-volume /workspace
 
 comfyui_path="/workspace/comfyui_0.1"
+comfy_log_path="/comfyui.log"
+
 echo "Starting ComfyUI API"
 source "${comfyui_path}/venv/bin/activate"
 TCMALLOC="$(ldconfig -p | grep -Po "libtcmalloc.so.\d" | head -n 1)"
 export LD_PRELOAD="${TCMALLOC}"
 export PYTHONUNBUFFERED=true
-export HF_HOME="/workspace"
 cd $comfyui_path
-python3 main.py --port 8080 > "${comfyui_path}/comfyui.log" 2>&1 &
+python3 main.py --port 8080 >> "${comfy_log_path}" 2>&1 &
 deactivate
 
 
@@ -23,3 +24,5 @@ if [ "$SERVE_API_LOCALLY" == "true" ]; then
 else
     python3 -u /rp_handler.py
 fi
+
+touch "$comfy_log_path"

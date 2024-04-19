@@ -1,4 +1,7 @@
+import asyncio
+from decimal import Decimal
 import runpod
+import datetime
 from runpod.serverless.utils import rp_upload
 import json
 import urllib.request
@@ -11,9 +14,12 @@ from io import BytesIO
 from app.clearCustomNodesFolder import clear_except_allowed_folder
 from dotenv import load_dotenv
 from app.comfy_subprocess import restart, start_aiohttp_server_subprocess, start_comfyui_subprocess
+from app.ddb_utils import finishJobWithError, updateRunJob, updateRunJobLogs
 from app.install_prompt_deps import install_prompt_deps
+from app.logUtils import clear_comfyui_log
+from app.s3_utils import upload_file_to_s3
 load_dotenv()
-from app.common import COMFY_API_AVAILABLE_INTERVAL_MS, COMFY_HOST, COMFY_HOST_URL, COMFY_POLLING_INTERVAL_MS, COMFYUI_PATH, COMFYUI_PORT, IS_SCANNER_WORKER, COMFY_POLLING_MAX_RETRIES, COMFY_API_AVAILABLE_MAX_RETRIES, REFRESH_WORKER, restart_error
+from app.common import COMFY_API_AVAILABLE_INTERVAL_MS, COMFY_HOST, COMFY_HOST_URL, COMFY_POLLING_INTERVAL_MS, COMFYUI_PATH, COMFYUI_LOG_PATH, IS_SCANNER_WORKER, COMFY_POLLING_MAX_RETRIES, COMFY_API_AVAILABLE_MAX_RETRIES, REFRESH_WORKER, restart_error
 
 def validate_input(job_input):
     """
@@ -228,9 +234,9 @@ def process_output_images(outputs, job_id):
 
     # The image is in the output folder
     if os.path.exists(local_image_path):
-        if os.environ.get("BUCKET_ENDPOINT_URL", False):
+        if os.environ.get("AWS_ACCESS_KEY_ID", False):
             # URL to image in AWS S3
-            image = rp_upload.upload_image(job_id, local_image_path)
+            image = upload_file_to_s3(local_image_path)
             print(
                 "runpod-worker-comfy - the image was generated and uploaded to AWS S3"
             )
@@ -242,56 +248,17 @@ def process_output_images(outputs, job_id):
             )
 
         return {
-            "status": "success",
-            "message": image,
+            "images": [image],
         }
     else:
         print("runpod-worker-comfy - the image does not exist in the output folder")
         return {
-            "status": "error",
-            "message": f"the image does not exist in the specified output folder: {local_image_path}",
+            "error": f"the image does not exist in the specified output folder: {local_image_path}",
         }
-
-def scanner_git_url(git_url:str):
-    # Make sure that the ComfyUI API is available
-    try:
-        clear_except_allowed_folder(f'{COMFYUI_PATH}/custom_nodes', ['ComfyUI-Manager'])
-        restart()
-        is_online = check_server(
-            f"http://{COMFY_HOST}",
-            COMFY_API_AVAILABLE_MAX_RETRIES,
-            COMFY_API_AVAILABLE_INTERVAL_MS,
-        )
-        if not is_online:
-            return {"error": "ComfyUI API is not available, please try again later."}
-        query_params = urllib.parse.urlencode({'url': git_url})
-        url = f"http://{COMFY_HOST}/customnode/install/git_url?{query_params}"
-        print(f"comfyui-manager install request: {url}")
-        time_before = time.perf_counter()
-        resp = requests.get(url)
-        install_time = time.perf_counter() - time_before
-        global restart_error
-        restart_error = ""
-        restart()
-        is_online = check_server(
-            f"http://{COMFY_HOST}",
-            100,
-            1000,
-        )
-        from app.update_node_package_install_time import update_node_package_install_time
-        update_node_package_install_time(git_url, install_time, is_online, restart_error)
-    except Exception as e:
-        return {"error": f"Error scan git url: {str(e)}"}
-    
-    return {"install_time": install_time, "restart_success": is_online, "refresh_worker": True}
-    
 
 def handler(job):
     print(f"🧪🧪handler received job")
     job_input = job["input"]
-
-    if(job_input.get("scannerGitUrl")):
-        return scanner_git_url(job_input.get("scannerGitUrl"))
 
     # Make sure that the input is valid
     validated_data, error_message = validate_input(job_input)
@@ -301,8 +268,12 @@ def handler(job):
     # Extract validated data
     prompt = validated_data["prompt"]
     deps = validated_data.get("deps")
+    time_start = time.perf_counter()
+    clear_comfyui_log()
+    asyncio.create_task(asyncio.to_thread(updateRunJob, {"id": job["id"], "status": "INSTALLING_DEPS", "startedAt": datetime.datetime.now().replace(microsecond=0).isoformat()}))
     if deps:
         prompt = install_prompt_deps(prompt, deps)
+    time_finish_install = time.perf_counter()
     # Make sure that the ComfyUI API is available
     server_online = check_server(
         f"http://{COMFY_HOST}",
@@ -310,6 +281,7 @@ def handler(job):
         500,
     )
     if not server_online:
+        finishJobWithError(job["id"], "ComfyUI API is not available, please try again later.")
         return {"error": "ComfyUI API is not available, please try again later."}
     # refresh server file lists
     requests.get(f'{COMFY_HOST_URL}/object_info')
@@ -320,33 +292,52 @@ def handler(job):
         prompt_id = queued_workflow["prompt_id"]
         print(f"runpod-worker-comfy queued workflow with ID {prompt_id}")
     except Exception as e:
+        finishJobWithError(job["id"], f"Error queuing workflow: {str(e)}")
         return {"error": f"Error queuing workflow: {str(e)}"}
 
     # Poll for completion
     print(f"runpod-worker-comfy - wait until image generation is complete")
     retries = 0
+    
     try:
         while retries < COMFY_POLLING_MAX_RETRIES:
+            # update log in ddb
+            if retries % 5 == 0:
+                updateRunJobLogs({"id": job["id"], "status": "RUNNING"})
+
             history = get_history(prompt_id)
 
             # Exit the loop if we have found the history
             if prompt_id in history and history[prompt_id].get("outputs"):
+                print('✅ Image generated history[prompt_id]:', history[prompt_id])
                 break
             else:
                 # Wait before trying again
                 time.sleep(COMFY_POLLING_INTERVAL_MS / 1000)
                 retries += 1
         else:
+            finishJobWithError(job["id"], "Max retries reached while waiting for image generation")
             return {"error": "Max retries reached while waiting for image generation"}
     except Exception as e:
-        return {"error": f"Error waiting for image generation: {str(e)}"}
+        finishJobWithError(job["id"], "error waiting for image generation")
+        return {"error": "error waiting for image generation"}
 
     # Get the generated image and return it as URL in an AWS bucket or as base64
     images_result = process_output_images(history[prompt_id].get("outputs"), job["id"])
 
-    result = {**images_result, "refresh_worker": REFRESH_WORKER}
+    error = None
+    if images_result.get("error"):
+        error = images_result["error"]
 
-    return result
+    updateRunJob({"id": job["id"], 
+        "status": "FAIL" if error else "SUCCESS", 
+        "finishedAt": datetime.datetime.now().replace(microsecond=0).isoformat(),
+        "output": images_result.get("images", None),
+        "error": error,
+        "duration": Decimal(str(time.perf_counter() - time_start)),
+        "installDuration": Decimal(str(time_finish_install - time_start)),
+    })
+    return {**images_result, "refresh_worker": REFRESH_WORKER}
 
 if __name__ == "__main__":
     # print("Starting comfyui...")
