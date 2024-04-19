@@ -3,16 +3,20 @@
 echo "Symlinking files from Network Volume"
 rm -rf /workspace && \
   ln -s /runpod-volume /workspace
-  
-# Use libtcmalloc for better memory management
+
+comfyui_path="/workspace/comfyui_0.1"
+echo "Starting ComfyUI API"
+source "${comfyui_path}/venv/bin/activate"
 TCMALLOC="$(ldconfig -p | grep -Po "libtcmalloc.so.\d" | head -n 1)"
 export LD_PRELOAD="${TCMALLOC}"
+export PYTHONUNBUFFERED=true
+export HF_HOME="/workspace"
+cd $comfyui_path
+python3 main.py --port 8080 > "${comfyui_path}/comfyui.log" 2>&1 &
+deactivate
 
-# echo "runpod-worker-comfy: Starting ComfyUI"
-# python3 /comfyui/main.py --disable-auto-launch --disable-metadata &
 
-echo "runpod-worker-comfy: Starting RunPod Handler"
-
+echo "Starting RunPod Handler"
 # Serve the API and don't shutdown the container
 if [ "$SERVE_API_LOCALLY" == "true" ]; then
     python3 -u /rp_handler.py --rp_serve_api

@@ -210,7 +210,7 @@ def process_output_images(outputs, job_id):
     """
 
     # The path where ComfyUI stores the generated images
-    COMFY_OUTPUT_PATH = os.environ.get("COMFY_OUTPUT_PATH", "/comfyui/output")
+    COMFY_OUTPUT_PATH = os.environ.get("COMFY_OUTPUT_PATH", f"{COMFYUI_PATH}/output")
 
     output_images = {}
 
@@ -349,8 +349,8 @@ def handler(job):
     return result
 
 if __name__ == "__main__":
-    print("Starting comfyui...")
-    start_comfyui_subprocess()
+    # print("Starting comfyui...")
+    # start_comfyui_subprocess()
     if IS_SCANNER_WORKER: 
         print("Starting aiohttp server...")
         start_aiohttp_server_subprocess()
