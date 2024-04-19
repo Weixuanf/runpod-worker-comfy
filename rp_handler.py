@@ -1,8 +1,6 @@
-import asyncio
 from decimal import Decimal
 import runpod
 import datetime
-from runpod.serverless.utils import rp_upload
 import json
 import urllib.request
 import urllib.parse
@@ -13,7 +11,6 @@ import base64
 from io import BytesIO
 from app.clearCustomNodesFolder import clear_except_allowed_folder
 from dotenv import load_dotenv
-from app.comfy_subprocess import restart, start_aiohttp_server_subprocess, start_comfyui_subprocess
 from app.ddb_utils import finishJobWithError, updateRunJob, updateRunJobLogs
 from app.install_prompt_deps import install_prompt_deps
 from app.logUtils import clear_comfyui_log
@@ -269,16 +266,16 @@ def handler(job):
     prompt = validated_data["prompt"]
     deps = validated_data.get("deps")
     time_start = time.perf_counter()
+    start_timestamp = datetime.datetime.now().replace(microsecond=0).isoformat()
     clear_comfyui_log()
-    asyncio.create_task(asyncio.to_thread(updateRunJob, {"id": job["id"], "status": "INSTALLING_DEPS", "startedAt": datetime.datetime.now().replace(microsecond=0).isoformat()}))
     if deps:
         prompt = install_prompt_deps(prompt, deps)
     time_finish_install = time.perf_counter()
     # Make sure that the ComfyUI API is available
     server_online = check_server(
         f"http://{COMFY_HOST}",
-        30, # 15sec
-        500,
+        COMFY_API_AVAILABLE_MAX_RETRIES, # 15sec
+        COMFY_API_AVAILABLE_INTERVAL_MS,
     )
     if not server_online:
         finishJobWithError(job["id"], "ComfyUI API is not available, please try again later.")
@@ -302,7 +299,7 @@ def handler(job):
     try:
         while retries < COMFY_POLLING_MAX_RETRIES:
             # update log in ddb
-            if retries % 5 == 0:
+            if retries % 10 == 0:
                 updateRunJobLogs({"id": job["id"], "status": "RUNNING"})
 
             history = get_history(prompt_id)
@@ -329,8 +326,9 @@ def handler(job):
     if images_result.get("error"):
         error = images_result["error"]
 
-    updateRunJob({"id": job["id"], 
+    updateRunJobLogs({"id": job["id"], 
         "status": "FAIL" if error else "SUCCESS", 
+        "startedAt": start_timestamp,
         "finishedAt": datetime.datetime.now().replace(microsecond=0).isoformat(),
         "output": images_result.get("images", None),
         "error": error,
@@ -340,9 +338,4 @@ def handler(job):
     return {**images_result, "refresh_worker": REFRESH_WORKER}
 
 if __name__ == "__main__":
-    # print("Starting comfyui...")
-    # start_comfyui_subprocess()
-    if IS_SCANNER_WORKER: 
-        print("Starting aiohttp server...")
-        start_aiohttp_server_subprocess()
     runpod.serverless.start({"handler": handler})

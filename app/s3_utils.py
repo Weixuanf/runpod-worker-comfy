@@ -14,9 +14,9 @@ def upload_file_to_s3(image_location):
     with open(image_location, "rb") as input_file:
         output = input_file.read()
     
-    file_name = str(uuid.uuid4())[:21]
+    file_name = str(uuid.uuid4())
 
-    s3_key = f"outputs/{file_name}{file_extension}"
+    s3_key = f"output/{file_name}{file_extension}"
     
     mime_type = guess_mime_type(image_location)
     print(f"📄 Uploading type {mime_type} to S3 {s3_key}")

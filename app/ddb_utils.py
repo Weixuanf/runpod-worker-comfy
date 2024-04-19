@@ -1,3 +1,4 @@
+import threading
 from .common import COMFYUI_LOG_PATH
 import datetime
 import os 
@@ -16,6 +17,10 @@ try:
     ddb_job_table = dynamodb.Table(job_table_name)
 except Exception as e:
     print("❌❌ Error in ddb_utils",e)
+
+def updateRunJobThread(item):
+    thread = threading.Thread(target=updateRunJob, args=(item,))
+    thread.start()
 
 #prompt job
 def updateRunJob(item):
@@ -54,8 +59,7 @@ def updateRunJob(item):
 def updateRunJobLogs(item):
     with open(COMFYUI_LOG_PATH, 'r', encoding='utf-8') as f:
         content = f.read()
-        print('🪵🪵log content', content)
-        return updateRunJob({
+        return updateRunJobThread({
             **item,
             'logs': content
         })
