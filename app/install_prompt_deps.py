@@ -1,13 +1,16 @@
+import hashlib
 import os
+import shutil
 import subprocess
 import threading
 from .logUtils import append_comfyui_log
-from .common import MODEL_PATHS,COMFYUI_PATH
+from .common import HASHED_FILENAME_PREFIX, MODEL_PATHS,COMFYUI_PATH
 
 DISK_MODEL_PATH = os.path.join(COMFYUI_PATH, 'models')
+TEMP_MODEL_PATH = '/'
 
 civitai_token = os.environ.get('CIVITAI_API_KEY',"none")
-
+downloaded_model_paths = set()
 def install_prompt_deps(prompt,deps):
     models = deps.get('models',{})
     for filename in models:
@@ -24,26 +27,59 @@ def install_prompt_deps(prompt,deps):
         model_exists = False
         for model_path in MODEL_PATHS:
             base_name, extension = os.path.splitext(filename)
-            hash_file_path = os.path.join(model_path, folderName, filehash + extension)
+            hash_file_path = os.path.join(model_path, folderName, HASHED_FILENAME_PREFIX+ filehash + extension)
             if os.path.exists(hash_file_path):
                 print(f"👌Model file {filename} exists in {hash_file_path}")
                 model_exists = True
+                # update the prompt with the hash_file_path
+                for key in prompt:
+                    prompt_node = prompt[key]
+                    inputs = prompt_node.get('inputs')
+                    if inputs:
+                        for key in inputs:
+                            if inputs[key] == filename:
+                                inputs[key] = filehash + extension
+                print(f"🧙 re-prompt with hash:{prompt}")
         if not model_exists:
-            hash_file_path = os.path.join(DISK_MODEL_PATH, folderName, filehash + extension)
-            print(f"⬇️Start downloading from {download_url} to {hash_file_path}")
-            start_subprocess(['wget','-O',hash_file_path, download_url, '--progress=bar:force'])
+            temp_path = os.path.join(TEMP_MODEL_PATH, filename)
+            file_path = os.path.join(DISK_MODEL_PATH, folderName, filename)
+            downloaded_model_paths.add(file_path)
+            print(f"⬇️Start downloading from {download_url} to {temp_path}")
+            start_subprocess(['wget','-O',temp_path, download_url, '--progress=bar:force'])
+            print(f"🌳Downloaded. moving from {temp_path} to {file_path}")
+            shutil.move(temp_path, file_path)
+            print(f"👌Moved to {file_path}")
             
-        # update the prompt with the hash_file_path
-        for key in prompt:
-            prompt_node = prompt[key]
-            inputs = prompt_node.get('inputs')
-            if inputs:
-                for key in inputs:
-                    if inputs[key] == filename:
-                        inputs[key] = filehash + extension
-        print(f"🧙 re-prompt with hash:{prompt}")
     return prompt
                 
+def rename_file_with_hash():
+    copy = downloaded_model_paths.copy()
+    for filepath in copy:
+        if os.path.exists(filepath):
+            print(f"#️⃣calculating hash for", filepath)
+            base_name, extension = os.path.splitext(filepath)
+            calc_hash = calculate_sha256(filepath)
+            directory = os.path.dirname(filepath)  # Get the directory of the file
+            hash_file_name = HASHED_FILENAME_PREFIX + calc_hash + extension
+            os.rename(filepath, os.path.join(directory, hash_file_name))
+            print(f"👌Renamed {filepath} to {hash_file_name}")
+            downloaded_model_paths.remove(filepath)
+        else:
+            print(f"File not found: {filepath}")
+            downloaded_model_paths.remove(filepath)
+            
+def calculate_sha256(file_path):
+    sha256_hash = hashlib.sha256()  # Create a new SHA-256 hash object
+    try:
+        with open(file_path, "rb") as f:  # Open the file in binary mode
+            for chunk in iter(lambda: f.read(4096), b""):  # Read in 4096 byte chunks
+                sha256_hash.update(chunk)  # Update the hash with the chunk
+    except FileNotFoundError:
+        return None
+    except Exception as e:
+        return None
+
+    return sha256_hash.hexdigest() 
 
 def stream_output(process, stream_type, logError=False):
     stream = process.stdout if stream_type == 'stdout' else process.stderr

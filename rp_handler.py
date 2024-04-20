@@ -12,7 +12,7 @@ from io import BytesIO
 from app.clearCustomNodesFolder import clear_except_allowed_folder
 from dotenv import load_dotenv
 from app.ddb_utils import finishJobWithError, updateRunJob, updateRunJobLogs
-from app.install_prompt_deps import install_prompt_deps
+from app.install_prompt_deps import install_prompt_deps, rename_file_with_hash
 from app.logUtils import clear_comfyui_log
 from app.s3_utils import upload_file_to_s3
 load_dotenv()
@@ -293,7 +293,7 @@ def handler(job):
         return {"error": f"Error queuing workflow: {str(e)}"}
 
     # Poll for completion
-    print(f"runpod-worker-comfy - wait until image generation is complete")
+    print(f"⌛️ wait until image generation is complete")
     retries = 0
     
     try:
@@ -306,7 +306,7 @@ def handler(job):
 
             # Exit the loop if we have found the history
             if prompt_id in history and history[prompt_id].get("outputs"):
-                print('✅ Image generated history[prompt_id]:', history[prompt_id])
+                print('🎨🖼️ Image generated history[prompt_id]:', history[prompt_id])
                 break
             else:
                 # Wait before trying again
@@ -335,6 +335,7 @@ def handler(job):
         "duration": Decimal(str(time.perf_counter() - time_start)),
         "installDuration": Decimal(str(time_finish_install - time_start)),
     })
+    rename_file_with_hash()
     return {**images_result, "refresh_worker": REFRESH_WORKER}
 
 if __name__ == "__main__":

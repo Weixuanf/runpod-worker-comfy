@@ -8,6 +8,7 @@ COMFYUI_PORT = "8080"
 MODEL_PATHS = [f'{COMFYUI_PATH}/models']
 COMFY_HOST = f"127.0.0.1:{COMFYUI_PORT}"
 COMFY_HOST_URL = f"http://{COMFY_HOST}"
+HASHED_FILENAME_PREFIX = "sha256_"
 # Time to wait between API check attempts in milliseconds
 COMFY_API_AVAILABLE_INTERVAL_MS = 50
 # Maximum number of API check attempts
