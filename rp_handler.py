@@ -9,9 +9,8 @@ import os
 import requests
 import base64
 from io import BytesIO
-from app.clearCustomNodesFolder import clear_except_allowed_folder
 from dotenv import load_dotenv
-from app.ddb_utils import finishJobWithError, updateRunJob, updateRunJobLogs
+from app.ddb_utils import finishJobWithError, updateRunJobLogsThread, updateRunJobLogs
 from app.install_prompt_deps import install_prompt_deps, rename_file_with_hash
 from app.logUtils import clear_comfyui_log
 from app.s3_utils import upload_file_to_s3
@@ -269,7 +268,7 @@ def handler(job):
     start_timestamp = datetime.datetime.now().replace(microsecond=0).isoformat()
     clear_comfyui_log()
     if deps:
-        prompt = install_prompt_deps(prompt, deps)
+        prompt = install_prompt_deps(prompt, deps, job["id"])
     time_finish_install = time.perf_counter()
     # Make sure that the ComfyUI API is available
     server_online = check_server(
@@ -300,7 +299,7 @@ def handler(job):
         while retries < COMFY_POLLING_MAX_RETRIES:
             # update log in ddb
             if retries % 10 == 0:
-                updateRunJobLogs({"id": job["id"], "status": "RUNNING"})
+                updateRunJobLogsThread({"id": job["id"], "status": "RUNNING", "startedAt": start_timestamp})
 
             history = get_history(prompt_id)
 

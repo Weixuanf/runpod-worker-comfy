@@ -4,23 +4,15 @@ import datetime
 import os 
 import boto3
 
-node_table_name = "ComfyNode" + os.environ.get('DDB_TABLE_POSTFIX', "")
-package_table_name = "ComfyNodePackage" + os.environ.get('DDB_TABLE_POSTFIX', "")
 job_table_name = "Job" + os.environ.get('DDB_TABLE_POSTFIX', "")
 
 try:
     dynamodb = boto3.resource(
         'dynamodb'
     )
-    ddb_node_table = dynamodb.Table(node_table_name)
-    ddb_package_table = dynamodb.Table(package_table_name)
     ddb_job_table = dynamodb.Table(job_table_name)
 except Exception as e:
     print("❌❌ Error in ddb_utils",e)
-
-def updateRunJobThread(item):
-    thread = threading.Thread(target=updateRunJob, args=(item,))
-    thread.start()
 
 #prompt job
 def updateRunJob(item):
@@ -59,10 +51,14 @@ def updateRunJob(item):
 def updateRunJobLogs(item):
     with open(COMFYUI_LOG_PATH, 'r', encoding='utf-8') as f:
         content = f.read()
-        return updateRunJobThread({
+        return updateRunJob({
             **item,
             'logs': content
         })
+
+def updateRunJobLogsThread(item):
+    thread = threading.Thread(target=updateRunJobLogs, args=(item,))
+    thread.start()
 
 def finishJobWithError(id, error):
     return updateRunJob({

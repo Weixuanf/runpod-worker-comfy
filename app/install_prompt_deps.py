@@ -3,6 +3,8 @@ import os
 import shutil
 import subprocess
 import threading
+
+from app.ddb_utils import updateRunJobLogsThread
 from .logUtils import append_comfyui_log
 from .common import HASHED_FILENAME_PREFIX, MODEL_PATHS,COMFYUI_PATH
 
@@ -11,7 +13,9 @@ TEMP_MODEL_PATH = '/'
 
 civitai_token = os.environ.get('CIVITAI_API_KEY',"none")
 downloaded_model_paths = set()
-def install_prompt_deps(prompt,deps):
+job_id = None
+def install_prompt_deps(prompt,deps, job_id):
+    job_id = job_id
     models = deps.get('models',{})
     for filename in models:
         model = models.get(filename)
@@ -88,6 +92,7 @@ def stream_output(process, stream_type, logError=False):
         if count < 10 or count % 80 == 0: 
             print(line.strip())
             append_comfyui_log(line.strip())
+            updateRunJobLogsThread({"id": job_id, "status": "INSTALLING"})
         count = count + 1
 
 def start_subprocess(cmd):
