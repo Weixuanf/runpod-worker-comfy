@@ -253,7 +253,7 @@ def process_output_images(outputs, job_id):
         }
 
 def handler(job):
-    print(f"🧪🧪handler received job")
+    print(f"🧪🧪handler received job", job['id'])
     job_input = job["input"]
 
     # Make sure that the input is valid
@@ -265,11 +265,12 @@ def handler(job):
     prompt = validated_data["prompt"]
     deps = validated_data.get("deps")
     time_start = time.perf_counter()
-    start_timestamp = datetime.datetime.now().replace(microsecond=0).isoformat()
+    start_timestamp = datetime.datetime.now().isoformat()
     clear_comfyui_log()
     if deps:
         prompt = install_prompt_deps(prompt, deps, job["id"])
     time_finish_install = time.perf_counter()
+    install_finish_timestamp = datetime.datetime.now().isoformat()
     # Make sure that the ComfyUI API is available
     server_online = check_server(
         f"http://{COMFY_HOST}",
@@ -288,7 +289,17 @@ def handler(job):
         prompt_id = queued_workflow["prompt_id"]
         print(f"runpod-worker-comfy queued workflow with ID {prompt_id}")
     except Exception as e:
-        finishJobWithError(job["id"], f"Error queuing workflow: {str(e)}")
+        print('❌Error queue_workflow:', str(e))
+        updateRunJobLogs({"id": job["id"], 
+                "status": "FAIL", 
+                "startedAt": start_timestamp,
+                "installFinishedAt": install_finish_timestamp,
+                "finishedAt": datetime.datetime.now().isoformat(),
+                "error": f"Error queuing workflow: {str(e)}",
+                "duration": Decimal(str(time.perf_counter() - time_start)),
+                "inferenceDuration": Decimal(str(time.perf_counter()  - time_finish_install )),
+                "installDuration": Decimal(str(time_finish_install - time_start))
+            })
         return {"error": f"Error queuing workflow: {str(e)}"}
 
     # Poll for completion
@@ -297,11 +308,10 @@ def handler(job):
     
     try:
         while retries < COMFY_POLLING_MAX_RETRIES:
-            # update log in ddb
-            if retries % 10 == 0:
-                updateRunJobLogsThread({"id": job["id"], "status": "RUNNING", "startedAt": start_timestamp})
-
             history = get_history(prompt_id)
+            if retries % 1 == 0:
+                # update log in ddb
+                updateRunJobLogsThread({"id": job["id"], "status": "RUNNING", "startedAt": start_timestamp})
 
             # Exit the loop if we have found the history
             if prompt_id in history and history[prompt_id].get("outputs"):
@@ -328,11 +338,13 @@ def handler(job):
     updateRunJobLogs({"id": job["id"], 
         "status": "FAIL" if error else "SUCCESS", 
         "startedAt": start_timestamp,
-        "finishedAt": datetime.datetime.now().replace(microsecond=0).isoformat(),
+        "installFinishedAt": install_finish_timestamp,
+        "finishedAt": datetime.datetime.now().isoformat(),
         "output": images_result.get("images", None),
         "error": error,
         "duration": Decimal(str(time.perf_counter() - time_start)),
-        "installDuration": Decimal(str(time_finish_install - time_start)),
+        "inferenceDuration": Decimal(str(time.perf_counter()  - time_finish_install )),
+        "installDuration": Decimal(str(time_finish_install - time_start))
     })
     rename_file_with_hash()
     return {**images_result, "refresh_worker": REFRESH_WORKER}

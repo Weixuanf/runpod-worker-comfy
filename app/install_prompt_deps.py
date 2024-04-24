@@ -14,8 +14,9 @@ TEMP_MODEL_PATH = '/'
 civitai_token = os.environ.get('CIVITAI_API_KEY',"none")
 downloaded_model_paths = set()
 job_id = None
-def install_prompt_deps(prompt,deps, job_id):
-    job_id = job_id
+def install_prompt_deps(prompt,deps, new_job_id):
+    global job_id, downloaded_model_paths
+    job_id = new_job_id
     models = deps.get('models',{})
     for filename in models:
         model = models.get(filename)
@@ -42,7 +43,7 @@ def install_prompt_deps(prompt,deps, job_id):
                     if inputs:
                         for key in inputs:
                             if inputs[key] == filename:
-                                inputs[key] = filehash + extension
+                                inputs[key] = HASHED_FILENAME_PREFIX + filehash + extension
                 print(f"🧙 re-prompt with hash:{prompt}")
         if not model_exists:
             temp_path = os.path.join(TEMP_MODEL_PATH, filename)
