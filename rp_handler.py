@@ -255,6 +255,7 @@ def process_output_images(outputs, job_id):
 def handler(job):
     print(f"🧪🧪handler received job", job['id'])
     job_input = job["input"]
+    job_item = job_input.get('jobItem', {})
 
     # Make sure that the input is valid
     validated_data, error_message = validate_input(job_input)
@@ -287,10 +288,12 @@ def handler(job):
     try:
         queued_workflow = queue_workflow(prompt)
         prompt_id = queued_workflow["prompt_id"]
+        updateRunJobLogsThread({"id": job["id"], **job_item, "status": "RUNNING", })
         print(f"runpod-worker-comfy queued workflow with ID {prompt_id}")
     except Exception as e:
         print('❌Error queue_workflow:', str(e))
         updateRunJobLogs({"id": job["id"], 
+                **job_item,
                 "status": "FAIL", 
                 "startedAt": start_timestamp,
                 "installFinishedAt": install_finish_timestamp,

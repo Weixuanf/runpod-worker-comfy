@@ -8,7 +8,7 @@ comfyui_path="/workspace/comfyui_0.1"
 comfy_log_path="/comfyui.log"
 
 echo "Starting ComfyUI API"
-source "${comfyui_path}/venv/bin/activate"
+source /workspace/comfyui_0.1/venv/bin/activate
 TCMALLOC="$(ldconfig -p | grep -Po "libtcmalloc.so.\d" | head -n 1)"
 export LD_PRELOAD="${TCMALLOC}"
 export PYTHONUNBUFFERED=true
