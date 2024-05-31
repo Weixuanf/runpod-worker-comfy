@@ -90,7 +90,7 @@ def stream_output(process, stream_type, logError=False):
     stream = process.stdout if stream_type == 'stdout' else process.stderr
     count = 0
     for line in iter(stream.readline, ''):
-        if count < 10 or count % 80 == 0: 
+        if count < 10 or count % 10 == 0: 
             print(line.strip())
             append_comfyui_log(line.strip())
             updateRunJobLogsThread({"id": job_id, "status": "INSTALLING"})

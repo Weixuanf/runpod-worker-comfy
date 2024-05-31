@@ -210,7 +210,11 @@ def process_output_images(outputs, job_id):
     - If the image file does not exist in the output folder, it returns an error status
       with a message indicating the missing image file.
     """
-
+    if not outputs:
+        print("runpod-worker-comfy - no outputs found")
+        return {
+            "error": "No outputs found",
+        }
     # The path where ComfyUI stores the generated images
     COMFY_OUTPUT_PATH = os.environ.get("COMFY_OUTPUT_PATH", f"{COMFYUI_PATH}/output")
 
@@ -308,11 +312,11 @@ def handler(job):
     # Poll for completion
     print(f"⌛️ wait until image generation is complete")
     retries = 0
-    
+    error = None
     try:
         while retries < COMFY_POLLING_MAX_RETRIES:
             history = get_history(prompt_id)
-            if retries % 1 == 0:
+            if retries % 5 == 0:
                 # update log in ddb
                 updateRunJobLogsThread({"id": job["id"], "status": "RUNNING", "startedAt": start_timestamp})
 
@@ -325,18 +329,16 @@ def handler(job):
                 time.sleep(COMFY_POLLING_INTERVAL_MS / 1000)
                 retries += 1
         else:
-            finishJobWithError(job["id"], "Max retries reached while waiting for image generation")
-            return {"error": "Max retries reached while waiting for image generation"}
-    except Exception as e:
-        finishJobWithError(job["id"], "error waiting for image generation")
-        return {"error": "error waiting for image generation"}
+            error = "Max retries reached while waiting for image generation"
+    except Exception as e: 
+        error = "error waiting for image generation"
+        print('❌Error polling for completion:', str(e))
 
     # Get the generated image and return it as URL in an AWS bucket or as base64
-    images_result = process_output_images(history[prompt_id].get("outputs"), job["id"])
-
-    error = None
-    if images_result.get("error"):
-        error = images_result["error"]
+    if history[prompt_id]:
+        images_result = process_output_images(history[prompt_id].get("outputs"), job["id"])
+        if images_result.get("error"):
+            error = images_result["error"]
 
     updateRunJobLogs({"id": job["id"], 
         "status": "FAIL" if error else "SUCCESS", 
