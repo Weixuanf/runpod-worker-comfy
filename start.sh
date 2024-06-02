@@ -4,11 +4,11 @@ echo "Symlinking files from Network Volume"
 rm -rf /workspace && \
   ln -s /runpod-volume /workspace
 
-comfyui_path="/workspace/comfyui_0.1"
+comfyui_path="/comfyui"
 comfy_log_path="/comfyui.log"
 
 echo "Starting ComfyUI API"
-source /workspace/comfyui_0.1/venv/bin/activate
+source /comfyui/venv/bin/activate
 TCMALLOC="$(ldconfig -p | grep -Po "libtcmalloc.so.\d" | head -n 1)"
 export LD_PRELOAD="${TCMALLOC}"
 export PYTHONUNBUFFERED=true
