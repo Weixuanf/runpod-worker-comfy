@@ -43,6 +43,7 @@ RUN python3 /scripts/install_custom_nodes.py
 
 # Add the start and the handler
 ADD start.sh rp_handler.py test_input.json ./
+ADD extra_model_paths.yaml /comfyui/
 ADD app/ /app/
 
 # RUN python3 install_custom_nodes.py
