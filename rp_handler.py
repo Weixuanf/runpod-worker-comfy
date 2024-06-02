@@ -305,7 +305,6 @@ def handler(job):
                 "error": f"Error queuing workflow: {str(e)}",
                 "duration": Decimal(str(time.perf_counter() - time_start)),
                 "inferenceDuration": Decimal(str(time.perf_counter()  - time_finish_install )),
-                "installDuration": Decimal(str(time_finish_install - time_start))
             })
         return {"error": f"Error queuing workflow: {str(e)}"}
 
