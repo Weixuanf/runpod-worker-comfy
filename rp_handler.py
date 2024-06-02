@@ -303,8 +303,8 @@ def handler(job):
                 "installFinishedAt": install_finish_timestamp,
                 "finishedAt": datetime.datetime.now().isoformat(),
                 "error": f"Error queuing workflow: {str(e)}",
-                "duration": Decimal(str(time.perf_counter() - time_start)),
-                "inferenceDuration": Decimal(str(time.perf_counter()  - time_finish_install )),
+                "duration": time.perf_counter() - time_start,
+                "inferenceDuration": time.perf_counter()  - time_finish_install,
             })
         return {"error": f"Error queuing workflow: {str(e)}"}
 
