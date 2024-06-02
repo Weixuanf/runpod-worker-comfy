@@ -317,7 +317,7 @@ def handler(job):
             history = get_history(prompt_id)
             if retries % 5 == 0:
                 # update log in ddb
-                updateRunJobLogsThread({"id": job["id"], "status": "RUNNING", "startedAt": start_timestamp})
+                updateRunJobLogsThread({"id": job["id"], **job_item, "status": "RUNNING", "startedAt": start_timestamp})
 
             # Exit the loop if we have found the history
             if prompt_id in history and history[prompt_id].get("outputs"):
@@ -340,6 +340,7 @@ def handler(job):
             error = images_result["error"]
 
     updateRunJobLogs({"id": job["id"], 
+        **job_item,
         "status": "FAIL" if error else "SUCCESS", 
         "startedAt": start_timestamp,
         "installFinishedAt": install_finish_timestamp,
