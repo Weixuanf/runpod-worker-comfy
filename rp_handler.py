@@ -1,4 +1,3 @@
-from decimal import Decimal
 import runpod
 import datetime
 import json
@@ -347,9 +346,8 @@ def handler(job):
         "finishedAt": datetime.datetime.now().isoformat(),
         "output": images_result.get("images", None),
         "error": error,
-        "duration": Decimal(str(time.perf_counter() - time_start)),
-        "inferenceDuration": Decimal(str(time.perf_counter()  - time_finish_install )),
-        "installDuration": Decimal(str(time_finish_install - time_start))
+        "duration": time.perf_counter() - time_start,
+        "inferenceDuration": time.perf_counter()  - time_finish_install,
     })
     rename_file_with_hash()
     return {**images_result, "refresh_worker": REFRESH_WORKER}
