@@ -189,7 +189,7 @@ def process_image(image_path):
     
     if os.environ.get("AWS_ACCESS_KEY_ID", False):
         # Adjust the bucket name as per your configuration
-        return upload_file_to_s3(image_path, "your-s3-bucket-name")
+        return upload_file_to_s3(image_path)
     else:
         return base64_encode(image_path)
 
