@@ -6,33 +6,33 @@ import threading
 
 from app.ddb_utils import updateRunJobLogsThread
 from .logUtils import append_comfyui_log
-from .common import HASHED_FILENAME_PREFIX, MODEL_PATHS,COMFYUI_PATH
+from .common import COMFYUI_MODEL_PATH, EXTRA_MODEL_PATH, HASHED_FILENAME_PREFIX,COMFYUI_PATH
 
-DISK_MODEL_PATH = os.path.join(COMFYUI_PATH, 'models')
 TEMP_MODEL_PATH = '/'
 
 civitai_token = os.environ.get('CIVITAI_API_KEY',"none")
 downloaded_model_paths = set()
-job_id = None
-def install_prompt_deps(prompt,deps, new_job_id):
-    global job_id, downloaded_model_paths
-    job_id = new_job_id
+job = None
+def install_prompt_deps(prompt,deps, new_job):
+    global job, downloaded_model_paths
+    job = new_job
     models = deps.get('models',{})
     for filename in models:
         model = models.get(filename)
-        filehash = model.get('fileHash')
-        folderName = model.get('fileFolder')
-        download_url = model.get('downloadUrl')
+        filehash = model.get('fileHash', model.get('hash'))
+        folder = model.get('fileFolder', model.get('folder'))
+        download_url = model.get('downloadUrl', model.get('url'))
         if download_url.startswith('https://civitai.com/'):
             download_url += f'?token={civitai_token}'
         elif not download_url.startswith('https://huggingface.co/'):
             raise ValueError('download_url not supported',download_url)
-        if not filehash or not folderName or not download_url:
-            raise ValueError('filehash or folderName or download_url not found in model',model)
+        if not folder or not download_url:
+            raise ValueError('folderName or download_url not found in model',model)
         model_exists = False
-        for model_path in MODEL_PATHS:
+        # Check if model cache exists in the EXTRA_MODEL_PATH
+        if filehash:
             base_name, extension = os.path.splitext(filename)
-            hash_file_path = os.path.join(model_path, folderName, HASHED_FILENAME_PREFIX+ filehash + extension)
+            hash_file_path = os.path.join(EXTRA_MODEL_PATH, folder, HASHED_FILENAME_PREFIX+ filehash + extension)
             if os.path.exists(hash_file_path):
                 print(f"👌Model file {filename} exists in {hash_file_path}")
                 model_exists = True
@@ -46,14 +46,11 @@ def install_prompt_deps(prompt,deps, new_job_id):
                                 inputs[key] = HASHED_FILENAME_PREFIX + filehash + extension
                 print(f"🧙 re-prompt with hash:{prompt}")
         if not model_exists:
-            temp_path = os.path.join(TEMP_MODEL_PATH, filename)
-            file_path = os.path.join(DISK_MODEL_PATH, folderName, filename)
+            # temp_path = os.path.join(TEMP_MODEL_PATH, filename)
+            file_path = os.path.join(COMFYUI_MODEL_PATH, folder, filename)
             downloaded_model_paths.add(file_path)
-            print(f"⬇️Start downloading from {download_url} to {temp_path}")
-            start_subprocess(['wget','-O',temp_path, download_url, '--progress=bar:force'])
-            print(f"🌳Downloaded. moving from {temp_path} to {file_path}")
-            shutil.move(temp_path, file_path)
-            print(f"👌Moved to {file_path}")
+            print(f"⬇️Start downloading from {download_url} to {file_path}")
+            start_subprocess(['wget','-O',file_path, download_url, '--progress=bar:force'])
             
     return prompt
                 
@@ -64,9 +61,13 @@ def rename_file_with_hash():
             print(f"#️⃣calculating hash for", filepath)
             base_name, extension = os.path.splitext(filepath)
             calc_hash = calculate_sha256(filepath)
-            directory = os.path.dirname(filepath)  # Get the directory of the file
             hash_file_name = HASHED_FILENAME_PREFIX + calc_hash + extension
-            os.rename(filepath, os.path.join(directory, hash_file_name))
+            # Calculate the relative path from base_path to full_path
+            model_rel_path = os.path.relpath(filepath, COMFYUI_MODEL_PATH)
+            model_rel_folder = os.path.dirname(model_rel_path)
+            new_model_path = os.path.join(EXTRA_MODEL_PATH, model_rel_folder, hash_file_name)
+            print('🌳 moving and renaming model from', filepath, 'to', new_model_path)
+            shutil.move(filepath, new_model_path)
             print(f"👌Renamed {filepath} to {hash_file_name}")
             downloaded_model_paths.remove(filepath)
         else:
@@ -93,7 +94,7 @@ def stream_output(process, stream_type, logError=False):
         if count < 10 or count % 10 == 0: 
             print(line.strip())
             append_comfyui_log(line.strip())
-            updateRunJobLogsThread({"id": job_id, "status": "INSTALLING"})
+            updateRunJobLogsThread({"id": job.id, **job, "status": "INSTALLING"})
         count = count + 1
 
 def start_subprocess(cmd):

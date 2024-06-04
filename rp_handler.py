@@ -183,11 +183,6 @@ def base64_encode(img_path):
 
 def process_output_images(outputs, job_id):
     """
-    This function takes the "outputs" from image generation and the job ID,
-    then determines the correct way to return the image, either as a direct URL
-    to an AWS S3 bucket or as a base64 encoded string, depending on the
-    environment configuration.
-
     Args:
         outputs (dict): A dictionary containing the outputs from image generation,
                         typically includes node IDs and their respective output data.
@@ -259,6 +254,7 @@ def handler(job):
     print(f"🧪🧪handler received job", job['id'])
     job_input = job["input"]
     job_item = job_input.get('jobItem', {})
+    job_item = {**job_item, 'id': job['id']}
 
     # Make sure that the input is valid
     validated_data, error_message = validate_input(job_input)
@@ -272,7 +268,7 @@ def handler(job):
     start_timestamp = datetime.datetime.now().isoformat()
     clear_comfyui_log()
     if deps:
-        prompt = install_prompt_deps(prompt, deps, job["id"])
+        prompt = install_prompt_deps(prompt, deps, job_item)
     time_finish_install = time.perf_counter()
     install_finish_timestamp = datetime.datetime.now().isoformat()
     # Make sure that the ComfyUI API is available

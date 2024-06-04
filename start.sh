@@ -8,13 +8,11 @@ comfyui_path="/comfyui"
 comfy_log_path="/comfyui.log"
 
 echo "Starting ComfyUI API"
-source /comfyui/venv/bin/activate
 TCMALLOC="$(ldconfig -p | grep -Po "libtcmalloc.so.\d" | head -n 1)"
 export LD_PRELOAD="${TCMALLOC}"
 export PYTHONUNBUFFERED=true
 cd $comfyui_path
 python3 main.py --port 8080 >> "${comfy_log_path}" 2>&1 &
-deactivate
 
 
 echo "Starting RunPod Handler"
