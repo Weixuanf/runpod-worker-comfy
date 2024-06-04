@@ -13,6 +13,7 @@ from app.ddb_utils import finishJobWithError, updateRunJobLogsThread, updateRunJ
 from app.install_prompt_deps import install_prompt_deps, rename_file_with_hash
 from app.logUtils import clear_comfyui_log
 from app.s3_utils import upload_file_to_s3
+from concurrent.futures import ThreadPoolExecutor, as_completed
 load_dotenv()
 from app.common import COMFY_API_AVAILABLE_INTERVAL_MS, COMFY_HOST, COMFY_HOST_URL, COMFY_POLLING_INTERVAL_MS, COMFYUI_PATH, COMFYUI_LOG_PATH, IS_SCANNER_WORKER, COMFY_POLLING_MAX_RETRIES, COMFY_API_AVAILABLE_MAX_RETRIES, REFRESH_WORKER, restart_error
 
@@ -180,6 +181,17 @@ def base64_encode(img_path):
         encoded_string = base64.b64encode(image_file.read()).decode("utf-8")
         return f"{encoded_string}"
 
+def process_image(image_path):
+    """ Determine processing type based on environment and process the image """
+    if not os.path.exists(image_path):
+        print(f"Error: File does not exist - {image_path}")
+        return None
+    
+    if os.environ.get("AWS_ACCESS_KEY_ID", False):
+        # Adjust the bucket name as per your configuration
+        return upload_file_to_s3(image_path, "your-s3-bucket-name")
+    else:
+        return base64_encode(image_path)
 
 def process_output_images(outputs, job_id):
     """
@@ -187,22 +199,11 @@ def process_output_images(outputs, job_id):
         outputs (dict): A dictionary containing the outputs from image generation,
                         typically includes node IDs and their respective output data.
         job_id (str): The unique identifier for the job.
-
     Returns:
-        dict: A dictionary with the status ('success' or 'error') and the message,
-              which is either the URL to the image in the AWS S3 bucket or a base64
-              encoded string of the image. In case of error, the message details the issue.
-
-    The function works as follows:
+        dict: { "images": [image] } or { "error": "messaage" }
     - It first determines the output path for the images from an environment variable,
       defaulting to "/comfyui/output" if not set.
     - It then iterates through the outputs to find the filenames of the generated images.
-    - After confirming the existence of the image in the output folder, it checks if the
-      AWS S3 bucket is configured via the BUCKET_ENDPOINT_URL environment variable.
-    - If AWS S3 is configured, it uploads the image to the bucket and returns the URL.
-    - If AWS S3 is not configured, it encodes the image in base64 and returns the string.
-    - If the image file does not exist in the output folder, it returns an error status
-      with a message indicating the missing image file.
     """
     if not outputs:
         print("runpod-worker-comfy - no outputs found")
@@ -212,43 +213,35 @@ def process_output_images(outputs, job_id):
     # The path where ComfyUI stores the generated images
     COMFY_OUTPUT_PATH = os.environ.get("COMFY_OUTPUT_PATH", f"{COMFYUI_PATH}/output")
 
-    output_images = {}
+    output_images = []
 
     for node_id, node_output in outputs.items():
         if "images" in node_output:
             for image in node_output["images"]:
-                output_images = image["filename"]
+                output_images.append(image["filename"])
 
     print(f"runpod-worker-comfy - image generation is done")
 
-    # expected image output folder
-    local_image_path = f"{COMFY_OUTPUT_PATH}/{output_images}"
+    # Path correction if needed
+    output_images = [f"{COMFY_OUTPUT_PATH}/{filename}" for filename in output_images]
 
-    print(f"runpod-worker-comfy - {local_image_path}")
-
-    # The image is in the output folder
-    if os.path.exists(local_image_path):
-        if os.environ.get("AWS_ACCESS_KEY_ID", False):
-            # URL to image in AWS S3
-            image = upload_file_to_s3(local_image_path)
-            print(
-                "runpod-worker-comfy - the image was generated and uploaded to AWS S3"
-            )
-        else:
-            # base64 image
-            image = base64_encode(local_image_path)
-            print(
-                "runpod-worker-comfy - the image was generated and converted to base64"
-            )
-
-        return {
-            "images": [image],
-        }
-    else:
-        print("runpod-worker-comfy - the image does not exist in the output folder")
-        return {
-            "error": f"the image does not exist in the specified output folder: {local_image_path}",
-        }
+    results = []
+    # Process images in parallel
+    with ThreadPoolExecutor() as executor:
+        future_to_image = {executor.submit(process_image, img_path): img_path for img_path in output_images}
+        for future in as_completed(future_to_image):
+            img_path = future_to_image[future]
+            try:
+                result = future.result()
+                if result is not None:
+                    results.append(result)
+                print(f"Image processed: {result}")
+            except Exception as exc:
+                print(f"{img_path} generated an exception: {exc}")
+    print(f"🗂️🌩️ All Images processed: {results}")
+    return {
+        "images": results
+    }
 
 def handler(job):
     print(f"🧪🧪handler received job", job['id'])

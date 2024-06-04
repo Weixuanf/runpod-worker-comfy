@@ -94,7 +94,7 @@ def stream_output(process, stream_type, logError=False):
         if count < 10 or count % 10 == 0: 
             print(line.strip())
             append_comfyui_log(line.strip())
-            updateRunJobLogsThread({"id": job.id, **job, "status": "INSTALLING"})
+            updateRunJobLogsThread({"id": job['id'], **job, "status": "INSTALLING"})
         count = count + 1
 
 def start_subprocess(cmd):
