@@ -57,8 +57,9 @@ def install_prompt_deps(prompt,deps, new_job):
     return prompt
                 
 def rename_file_with_hash():
-    copy = downloaded_model_paths.copy()
     global downloaded_model_paths
+    copy = downloaded_model_paths.copy()
+    
     for filepath in copy:
         if os.path.exists(filepath):
             print(f"#️⃣calculating hash for", filepath)
@@ -71,6 +72,7 @@ def rename_file_with_hash():
             new_model_path = os.path.join(EXTRA_MODEL_PATH, model_rel_folder, hash_file_name)
             print('🌳 moving and renaming model from', filepath, 'to', new_model_path)
             try:
+                os.makedirs(os.path.dirname(new_model_path), exist_ok=True)
                 shutil.move(filepath, new_model_path)
                 print(f"👌Renamed {filepath} to {hash_file_name}")
             except Exception as e:

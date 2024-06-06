@@ -323,6 +323,7 @@ def handler(job):
     print(f"⌛️ wait until image generation is complete")
     retries = 0
     error = None
+    images_result = {}
     try:
         while retries < COMFY_POLLING_MAX_RETRIES:
             history = get_history(prompt_id)
