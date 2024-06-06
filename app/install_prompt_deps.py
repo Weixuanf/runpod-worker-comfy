@@ -62,23 +62,35 @@ def rename_file_with_hash():
     
     for filepath in copy:
         if os.path.exists(filepath):
-            print(f"#️⃣calculating hash for", filepath)
-            base_name, extension = os.path.splitext(filepath)
-            calc_hash = calculate_sha256(filepath)
-            hash_file_name = HASHED_FILENAME_PREFIX + calc_hash + extension
-            # Calculate the relative path from base_path to full_path
+            
+            # Calculate the relative path for the new directory without the hash name yet
             model_rel_path = os.path.relpath(filepath, COMFYUI_MODEL_PATH)
             model_rel_folder = os.path.dirname(model_rel_path)
-            new_model_path = os.path.join(EXTRA_MODEL_PATH, model_rel_folder, hash_file_name)
-            print('🌳 moving and renaming model from', filepath, 'to', new_model_path)
-            try:
-                os.makedirs(os.path.dirname(new_model_path), exist_ok=True)
-                shutil.move(filepath, new_model_path)
-                print(f"👌Renamed {filepath} to {hash_file_name}")
-            except Exception as e:
-                logging.error(f"❌Error moving model: {e}", exc_info=True)
+            temp_model_path = os.path.join(EXTRA_MODEL_PATH, model_rel_folder, os.path.basename(filepath))
             
-            downloaded_model_paths.remove(filepath)
+            try:
+                # Ensure the target directory exists
+                os.makedirs(os.path.dirname(temp_model_path), exist_ok=True)
+                # Move the file to the new directory
+                print(f"🚚 Moving file", filepath, 'to', temp_model_path)
+                shutil.move(filepath, temp_model_path)
+                print(f"👌 Moved {filepath} to {temp_model_path}")
+                
+                # After moving, calculate the hash
+                print(f"#️⃣ Calculating hash for", temp_model_path)
+                base_name, extension = os.path.splitext(temp_model_path)
+                calc_hash = calc_hash(temp_model_path)
+                hash_file_name = HASHED_FILENAME_PREFIX + calc_hash + extension
+                new_model_path = os.path.join(os.path.dirname(temp_model_path), hash_file_name)
+                
+                # Rename the file based on the hash
+                os.rename(temp_model_path, new_model_path)
+                print(f"🏷️ Renamed to {new_model_path}")
+                
+                downloaded_model_paths.remove(filepath)
+
+            except Exception as e:
+                logging.error(f"❌Error moving or renaming model: {e}", exc_info=True)
         else:
             print(f"File not found: {filepath}")
             downloaded_model_paths.remove(filepath)

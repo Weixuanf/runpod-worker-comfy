@@ -6,7 +6,7 @@ COMFYUI_LOG_PATH = '/comfyui.log'
 print(f'👉COMFYUI_PATH: {COMFYUI_PATH}')
 COMFYUI_PORT = "8080"
 COMFYUI_MODEL_PATH = f'{COMFYUI_PATH}/models'
-EXTRA_MODEL_PATH = os.environ.get("EXTRA_MODEL_PATH", "/runpod-volume/comfyui_0.1/models")
+EXTRA_MODEL_PATH = os.environ.get("EXTRA_MODEL_PATH", "/runpod-volume/comfyui/models")
 COMFY_HOST = f"127.0.0.1:{COMFYUI_PORT}"
 COMFY_HOST_URL = f"http://{COMFY_HOST}"
 HASHED_FILENAME_PREFIX = "sha256_"

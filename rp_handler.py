@@ -243,10 +243,11 @@ def process_output_images(outputs: Outputs):
         for output_type, output in node_output.items():
             for image in output:
                 subfolder = image.get("subfolder", "")
+                type = image.get("type", "output")
                 output_images.append(os.path.join(subfolder, image.get("filename")))
             
     # Path correction if needed
-    output_images = [f"{COMFY_OUTPUT_PATH}/{filename}" for filename in output_images]
+    output_images = [f"{COMFYUI_PATH}/{type}/{filename}" for filename in output_images]
     print(f"output image path: {output_images}")
     results = []
     # Process images in parallel
