@@ -1,4 +1,4 @@
-import uuid
+from nanoid import generate
 import boto3
 import os
 import mimetypes
@@ -14,7 +14,7 @@ def upload_file_to_s3(image_location):
     with open(image_location, "rb") as input_file:
         output = input_file.read()
     
-    file_name = str(uuid.uuid4())
+    file_name = str(generate(size=18))
 
     s3_key = f"output/{file_name}{file_extension}"
     
@@ -23,7 +23,8 @@ def upload_file_to_s3(image_location):
     # Upload to S3
     s3_client.put_object(Bucket=s3_bucket_name, Key=s3_key, Body=output, ContentType=mime_type)
     print(f"✅ Uploaded {image_location} to S3 {s3_key}")
-    return f'https://{s3_bucket_name}.s3.{aws_region}.amazonaws.com/{s3_key}'
+    # return f'https://{s3_bucket_name}.s3.{aws_region}.amazonaws.com/{s3_key}'
+    return f"{file_name}{file_extension}"
 
 def guess_mime_type(file_name):
     mime_type, _ = mimetypes.guess_type(file_name)

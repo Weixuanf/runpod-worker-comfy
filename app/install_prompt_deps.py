@@ -1,4 +1,5 @@
 import hashlib
+import logging
 import os
 import shutil
 import subprocess
@@ -15,6 +16,7 @@ downloaded_model_paths = set()
 job = None
 def install_prompt_deps(prompt,deps, new_job):
     global job, downloaded_model_paths
+    downloaded_model_paths.clear()
     job = new_job
     models = deps.get('models',{})
     for filename in models:
@@ -56,6 +58,7 @@ def install_prompt_deps(prompt,deps, new_job):
                 
 def rename_file_with_hash():
     copy = downloaded_model_paths.copy()
+    global downloaded_model_paths
     for filepath in copy:
         if os.path.exists(filepath):
             print(f"#️⃣calculating hash for", filepath)
@@ -67,8 +70,12 @@ def rename_file_with_hash():
             model_rel_folder = os.path.dirname(model_rel_path)
             new_model_path = os.path.join(EXTRA_MODEL_PATH, model_rel_folder, hash_file_name)
             print('🌳 moving and renaming model from', filepath, 'to', new_model_path)
-            shutil.move(filepath, new_model_path)
-            print(f"👌Renamed {filepath} to {hash_file_name}")
+            try:
+                shutil.move(filepath, new_model_path)
+                print(f"👌Renamed {filepath} to {hash_file_name}")
+            except Exception as e:
+                logging.error(f"❌Error moving model: {e}", exc_info=True)
+            
             downloaded_model_paths.remove(filepath)
         else:
             print(f"File not found: {filepath}")

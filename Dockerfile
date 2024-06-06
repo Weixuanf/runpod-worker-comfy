@@ -33,7 +33,7 @@ WORKDIR /comfyui
 RUN pip3 install -r requirements.txt \
     && pip3 install -r custom_nodes/ComfyUI-Manager/requirements.txt
 
-RUN pip3 install runpod requests boto3
+RUN pip3 install runpod requests boto3 nanoid
 
 # Go back to the root
 WORKDIR /

@@ -16,6 +16,8 @@ from app.s3_utils import upload_file_to_s3
 from concurrent.futures import ThreadPoolExecutor, as_completed
 load_dotenv()
 from app.common import COMFY_API_AVAILABLE_INTERVAL_MS, COMFY_HOST, COMFY_HOST_URL, COMFY_POLLING_INTERVAL_MS, COMFYUI_PATH, COMFYUI_LOG_PATH, IS_SCANNER_WORKER, COMFY_POLLING_MAX_RETRIES, COMFY_API_AVAILABLE_MAX_RETRIES, REFRESH_WORKER, restart_error
+import logging
+logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def validate_input(job_input):
     """
@@ -193,7 +195,17 @@ def process_image(image_path):
     else:
         return base64_encode(image_path)
 
-def process_output_images(outputs, job_id):
+from typing import Dict, List, TypedDict
+
+class Image(TypedDict):
+    filename: str
+    subfolder: str
+    type: str
+    format: str
+
+Outputs = Dict[str, dict[str, List[Image]]]
+
+def process_output_images(outputs: Outputs):
     """
     Args:
         outputs (dict): A dictionary containing the outputs from image generation,
@@ -214,17 +226,28 @@ def process_output_images(outputs, job_id):
     COMFY_OUTPUT_PATH = os.environ.get("COMFY_OUTPUT_PATH", f"{COMFYUI_PATH}/output")
 
     output_images = []
-
+    """ example outputs: {
+        "10": {
+            "gifs": [
+                {
+                    "filename": "readme_00001.gif",
+                    "subfolder": "AnimateDiff",
+                    "type": "temp",
+                    "format": "image/gif"
+                }
+            ]
+        }
+    }
+    """
     for node_id, node_output in outputs.items():
-        if "images" in node_output:
-            for image in node_output["images"]:
-                output_images.append(image["filename"])
-
-    print(f"runpod-worker-comfy - image generation is done")
-
+        for output_type, output in node_output.items():
+            for image in output:
+                subfolder = image.get("subfolder", "")
+                output_images.append(os.path.join(subfolder, image.get("filename")))
+            
     # Path correction if needed
     output_images = [f"{COMFY_OUTPUT_PATH}/{filename}" for filename in output_images]
-
+    print(f"output image path: {output_images}")
     results = []
     # Process images in parallel
     with ThreadPoolExecutor() as executor:
@@ -310,6 +333,9 @@ def handler(job):
             # Exit the loop if we have found the history
             if prompt_id in history and history[prompt_id].get("outputs"):
                 print('🎨🖼️ Image generated history[prompt_id]:', history[prompt_id])
+                images_result = process_output_images(history[prompt_id].get("outputs"))
+                if images_result.get("error"):
+                    error = images_result["error"]
                 break
             else:
                 # Wait before trying again
@@ -320,12 +346,6 @@ def handler(job):
     except Exception as e: 
         error = "error waiting for image generation"
         print('❌Error polling for completion:', str(e))
-
-    # Get the generated image and return it as URL in an AWS bucket or as base64
-    if history[prompt_id]:
-        images_result = process_output_images(history[prompt_id].get("outputs"), job["id"])
-        if images_result.get("error"):
-            error = images_result["error"]
 
     updateRunJobLogs({"id": job["id"], 
         **job_item,
