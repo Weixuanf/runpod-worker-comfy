@@ -79,7 +79,7 @@ def rename_file_with_hash():
                 # After moving, calculate the hash
                 print(f"#️⃣ Calculating hash for", temp_model_path)
                 base_name, extension = os.path.splitext(temp_model_path)
-                calc_hash = calc_hash(temp_model_path)
+                calc_hash = calculate_sha256(temp_model_path)
                 hash_file_name = HASHED_FILENAME_PREFIX + calc_hash + extension
                 new_model_path = os.path.join(os.path.dirname(temp_model_path), hash_file_name)
                 
