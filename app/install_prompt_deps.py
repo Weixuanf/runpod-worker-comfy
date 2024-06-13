@@ -48,13 +48,25 @@ def install_prompt_deps(prompt,deps, new_job):
                                 inputs[key] = HASHED_FILENAME_PREFIX + filehash + extension
                 print(f"🧙 re-prompt with hash:{prompt}")
         if not model_exists:
-            # temp_path = os.path.join(TEMP_MODEL_PATH, filename)
             file_path = os.path.join(COMFYUI_MODEL_PATH, folder, filename)
             downloaded_model_paths.add(file_path)
-            print(f"⬇️Start downloading from {download_url} to {file_path}")
+            print(f"⬇️Start downloading model from {download_url} to {file_path}")
             start_subprocess(['wget','-O',file_path, download_url, '--progress=bar:force'])
-            
+    install_prompt_images(prompt,deps)
     return prompt
+
+def install_prompt_images(prompt,deps):
+    images = deps.get('images',{})
+    for filename in images:
+        image = images.get(filename)
+        download_url = image.get('url')
+        if not download_url:
+            continue
+        #save image to input folder
+        image_path = os.path.join(COMFYUI_PATH, 'input', filename)
+        print(f"⬇️Start downloading image from {download_url} to {image_path}")
+        start_subprocess(['wget','-O',image_path, download_url, '--progress=bar:force'])
+
                 
 def rename_file_with_hash():
     global downloaded_model_paths
