@@ -49,7 +49,8 @@ def install_prompt_deps(prompt,deps, new_job):
                 print(f"🧙 re-prompt with hash:{prompt}")
         if not model_exists:
             file_path = os.path.join(COMFYUI_MODEL_PATH, folder, filename)
-            downloaded_model_paths.add(file_path)
+            model['file_path'] = file_path
+            downloaded_model_paths.add(model)
             print(f"⬇️Start downloading model from {download_url} to {file_path}")
             start_subprocess(['wget','-O',file_path, download_url, '--progress=bar:force'])
     install_prompt_images(prompt,deps)
@@ -72,8 +73,9 @@ def rename_file_with_hash():
     global downloaded_model_paths
     copy = downloaded_model_paths.copy()
     
-    for filepath in copy:
-        if os.path.exists(filepath):
+    for model in copy:
+        filepath = model.get('file_path')
+        if filepath and os.path.exists(filepath):
             
             # Calculate the relative path for the new directory without the hash name yet
             model_rel_path = os.path.relpath(filepath, COMFYUI_MODEL_PATH)
@@ -87,7 +89,9 @@ def rename_file_with_hash():
                 print(f"🚚 Moving file", filepath, 'to', temp_model_path)
                 shutil.move(filepath, temp_model_path)
                 print(f"👌 Moved {filepath} to {temp_model_path}")
-                
+                if model.get('keepName', False):
+                    print(f"👌 Keeping original file name {filepath}")
+                    continue
                 # After moving, calculate the hash
                 print(f"#️⃣ Calculating hash for", temp_model_path)
                 base_name, extension = os.path.splitext(temp_model_path)

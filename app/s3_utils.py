@@ -24,7 +24,8 @@ def upload_file_to_s3(image_location):
     s3_client.put_object(Bucket=s3_bucket_name, Key=s3_key, Body=output, ContentType=mime_type)
     print(f"✅ Uploaded {image_location} to S3 {s3_key}")
     # return f'https://{s3_bucket_name}.s3.{aws_region}.amazonaws.com/{s3_key}'
-    return f"{file_name}{file_extension}"
+    # return f"{file_name}{file_extension}"
+    return f"{s3_key}"
 
 def guess_mime_type(file_name):
     mime_type, _ = mimetypes.guess_type(file_name)
