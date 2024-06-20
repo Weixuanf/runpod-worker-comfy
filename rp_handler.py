@@ -270,6 +270,16 @@ def process_output_images(outputs: Outputs):
 def handler(job):
     print(f"🧪🧪handler received job", job['id'])
     job_input = job["input"]
+    if job_input.get('object_info', False):
+        server_online = check_server(
+            f"http://{COMFY_HOST}",
+            COMFY_API_AVAILABLE_MAX_RETRIES, # 15sec
+            COMFY_API_AVAILABLE_INTERVAL_MS,
+        )
+        if not server_online:
+            return {"error": "ComfyUI API is not available, please try again later."}
+        resp = requests.get(f'{COMFY_HOST_URL}/object_info')
+        return resp.json()
     job_item = job_input.get('jobItem', {})
     job_item = {**job_item, 'id': job['id']}
 

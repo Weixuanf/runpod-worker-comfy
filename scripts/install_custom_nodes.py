@@ -12,6 +12,7 @@ CUSTOM_NODES_REPO = [
     "https://github.com/Kosinkadink/ComfyUI-AnimateDiff-Evolved",
     "https://github.com/Fannovel16/comfyui_controlnet_aux",
     "https://github.com/huchenlei/ComfyUI-layerdiffuse",
+    "https://github.com/kijai/ComfyUI-SUPIR",
     # "https://github.com/ZHO-ZHO-ZHO/ComfyUI-BRIA_AI-RMBG"
 ]
 

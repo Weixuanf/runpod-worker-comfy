@@ -1,6 +1,6 @@
 {
   "input": {
-    "workflow": {
+    "prompt": {
       "3": {
         "inputs": {
           "seed": 234234,
