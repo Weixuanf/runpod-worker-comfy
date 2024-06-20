@@ -12,7 +12,7 @@ from .common import COMFYUI_MODEL_PATH, EXTRA_MODEL_PATH, HASHED_FILENAME_PREFIX
 TEMP_MODEL_PATH = '/'
 
 civitai_token = os.environ.get('CIVITAI_API_KEY',"none")
-downloaded_model_paths = set()
+downloaded_model_paths = {}
 job = None
 def install_prompt_deps(prompt,deps, new_job):
     global job, downloaded_model_paths
@@ -50,7 +50,7 @@ def install_prompt_deps(prompt,deps, new_job):
         if not model_exists:
             file_path = os.path.join(COMFYUI_MODEL_PATH, folder, filename)
             model['file_path'] = file_path
-            downloaded_model_paths.add(model)
+            downloaded_model_paths[file_path] = model
             print(f"⬇️Start downloading model from {download_url} to {file_path}")
             start_subprocess(['wget','-O',file_path, download_url, '--progress=bar:force'])
     install_prompt_images(prompt,deps)
@@ -73,8 +73,9 @@ def rename_file_with_hash():
     global downloaded_model_paths
     copy = downloaded_model_paths.copy()
     
-    for model in copy:
-        filepath = model.get('file_path')
+    for key in list(copy.keys()):
+        model = copy[key]
+        filepath = key
         if filepath and os.path.exists(filepath):
             
             # Calculate the relative path for the new directory without the hash name yet
@@ -103,13 +104,13 @@ def rename_file_with_hash():
                 os.rename(temp_model_path, new_model_path)
                 print(f"🏷️ Renamed to {new_model_path}")
                 
-                downloaded_model_paths.remove(filepath)
+                del downloaded_model_paths[filepath]
 
             except Exception as e:
                 logging.error(f"❌Error moving or renaming model: {e}", exc_info=True)
         else:
             print(f"File not found: {filepath}")
-            downloaded_model_paths.remove(filepath)
+            del downloaded_model_paths[filepath]
             
 def calculate_sha256(file_path):
     sha256_hash = hashlib.sha256()  # Create a new SHA-256 hash object
