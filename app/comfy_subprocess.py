@@ -1,7 +1,8 @@
 import subprocess
 import signal
 import threading
-from app.common import COMFYUI_PORT, restart_error
+from app.common import COMFYUI_PORT, restart_error, COMFYUI_PATH
+import os 
 
 # Global variable to track the subprocess status
 is_subprocess_running = False
@@ -37,8 +38,10 @@ def start_comfyui_subprocess():
     # env_vars["LD_PRELOAD"] = "path_to_libtcmalloc.so"  # Update this path as necessary
 
     # Start the subprocess and redirect its output and error
+    venv_path = f"{COMFYUI_PATH}/venv/bin/python3"
+    print("👉💼venv path", venv_path, 'exists', os.path.exists(venv_path), "comfyui main.py exists:",os.path.exists(f"{COMFYUI_PATH}/main.py"))
     subprocess_handle = subprocess.Popen(
-        ["python3", "-u", "comfyui/main.py", "--disable-auto-launch", "--disable-metadata", "--port", COMFYUI_PORT],
+        [venv_path if os.path.exists(venv_path) else "python3", "-u", f"{COMFYUI_PATH}/main.py", "--disable-auto-launch", "--disable-metadata", "--port", COMFYUI_PORT],
         # env=env_vars,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,

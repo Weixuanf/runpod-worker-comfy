@@ -1,57 +1,49 @@
-from githubUtils import download_and_upload_to_s3, get_github_repo_stars
+import threading
+import requests
+from .common import COMFYUI_LOG_PATH
 import datetime
 import os 
-import boto3
-import json
 
-node_table_name = "ComfyNode" + os.environ.get('DDB_TABLE_POSTFIX', "")
-package_table_name = "ComfyNodePackage" + os.environ.get('DDB_TABLE_POSTFIX', "")
-
-try:
-    dynamodb = boto3.resource(
-        'dynamodb'
-    )
-    ddb_node_table = dynamodb.Table(node_table_name)
-    ddb_package_table = dynamodb.Table(package_table_name)
-except Exception as e:
-    print("❌❌ Error in ddb_utils",e)
-
-#####v2######
-def put_node_package_ddb(item):
+#prompt job
+def updateRunJob(item):
     try:
-        repo_data = get_github_repo_stars(item.get('gitHtmlUrl'))
-        owner_avatar_url= repo_data['owner_avatar_url'] if 'owner_avatar_url' in repo_data else None
-        star_count = repo_data['stars'] if 'stars' in repo_data else None
+        id = item['id']  # Extract the primary key from the item
         
-        webDir = item.get('webDir')
-        jsFilePaths = None
-        if webDir:
-            jsFilePaths = json.dumps(download_and_upload_to_s3(item['gitRepo'], webDir))
-        response = ddb_package_table.put_item(Item={
-            **item,
-            'updatedAt': datetime.datetime.now().replace(microsecond=0).isoformat(),
-            'totalStars': star_count,
-            'ownerGitAvatarUrl': owner_avatar_url,
-            'description': repo_data.get('description',''),
-            'jsFilePaths': jsFilePaths
-        })
-        print('🟢✅Successfully added package item to DynamoDB', item.get('id'))
-        return item
+        # Define the URL
+        url = os.environ.get("UPDATE_RUNJOB_API_URL", None)
+        if url is None:
+            raise ValueError("RUNJOB_API_URL environment variable not set")
+        
+        # Send the POST request
+        api_key = os.environ.get("UPDATE_RUNJOB_API_KEY", "")
+        response = requests.post(url, json=item, headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"})
+        
+        # Check if the request was successful
+        if response.status_code == 200:
+            return response.json()
+        else:
+            print(f"❌🔴Error updating job item: {response.status_code} - {response.text}")
+            return None
     except Exception as e:
-        print("❌🔴Error adding package item to DynamoDB:", e)
+        print("❌🔴Error updating job item:", e)
         return None
 
-def put_node_ddb(item):
-    # make sure to only create new node if it doesn't exist, to avoid override folderPaths field!
-    try:
-        response = ddb_node_table.put_item(
-            Item={
-                **item,
-                'updatedAt': datetime.datetime.now().replace(microsecond=0).isoformat(),
-            },
-            ConditionExpression="attribute_not_exists(id)"
-        )
-        return item
-    except Exception as e:
-        print("🚼Error adding node item to DynamoDB:", e)
-        return None
+def updateRunJobLogs(item):
+    with open(COMFYUI_LOG_PATH, 'r', encoding='utf-8') as f:
+        content = f.read()
+        return updateRunJob({
+            **item,
+            'logs': content
+        })
+
+def updateRunJobLogsThread(item):
+    thread = threading.Thread(target=updateRunJobLogs, args=(item,))
+    thread.start()
+
+def finishJobWithError(id, error):
+    return updateRunJob({
+        'id': id,
+        'error': error,
+        'status': 'FAIL',
+        "finishedAt": datetime.datetime.now().replace(microsecond=0).isoformat(),
+    })

@@ -33,25 +33,20 @@ WORKDIR /comfyui
 RUN pip3 install -r requirements.txt \
     && pip3 install -r custom_nodes/ComfyUI-Manager/requirements.txt
 
-RUN pip3 install runpod requests boto3
-
-# Download checkpoints/vae/LoRA to include in image
-# RUN wget -O models/checkpoints/sd_xl_base_1.0.safetensors https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors
-# RUN wget -O models/vae/sdxl_vae.safetensors https://huggingface.co/stabilityai/sdxl-vae/resolve/main/sdxl_vae.safetensors
-# RUN wget -O models/vae/sdxl-vae-fp16-fix.safetensors https://huggingface.co/madebyollin/sdxl-vae-fp16-fix/resolve/main/sdxl_vae.safetensors
-# RUN wget -O models/loras/xl_more_art-full_v1.safetensors https://civitai.com/api/download/models/152309
-
-# Example for adding specific models into image
-# ADD models/checkpoints/sd_xl_base_1.0.safetensors models/checkpoints/
-# ADD models/vae/sdxl_vae.safetensors models/vae/
+RUN pip3 install runpod requests boto3 nanoid
 
 # Go back to the root
 WORKDIR /
 
+ADD scripts /scripts/
+RUN python3 /scripts/install_custom_nodes.py
+
 # Add the start and the handler
-ADD start.sh rp_handler.py test_input.json install_custom_nodes.py ./
+ADD start.sh rp_handler.py test_input.json ./
+ADD extra_model_paths.yaml /comfyui/
 ADD app/ /app/
-RUN python3 install_custom_nodes.py
+
+# RUN python3 install_custom_nodes.py
 RUN chmod +x /start.sh
 
 # Start the container
