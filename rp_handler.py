@@ -1,3 +1,4 @@
+import traceback
 import runpod
 import datetime
 import json
@@ -217,6 +218,7 @@ def process_output_images(outputs: Outputs):
       defaulting to "/comfyui/output" if not set.
     - It then iterates through the outputs to find the filenames of the generated images.
     """
+    print('process output', outputs)
     if not outputs:
         print("runpod-worker-comfy - no outputs found")
         return {
@@ -242,9 +244,15 @@ def process_output_images(outputs: Outputs):
     for node_id, node_output in outputs.items():
         for output_type, output in node_output.items():
             for image in output:
-                subfolder = image.get("subfolder", "")
-                type = image.get("type", "output")
-                output_images.append(os.path.join(subfolder, image.get("filename")))
+                if not isinstance(image, dict) or "filename" not in image:
+                    continue
+                try:
+                    subfolder = image.get("subfolder", "")
+                    type = image.get("type", "output")
+                    output_images.append(os.path.join(subfolder, image.get("filename")))
+                except Exception as e:
+                    print(f"Error processing output in: node [{node_id}] {image} - {e}")
+                    print(traceback.format_exc())
             
     # Path correction if needed
     output_images = [f"{COMFYUI_PATH}/{type}/{filename}" for filename in output_images]
@@ -292,12 +300,23 @@ def handler(job):
     prompt = validated_data["prompt"]
     deps = validated_data.get("deps")
     time_start = time.perf_counter()
-    start_timestamp = datetime.datetime.now().isoformat()
+    job_item = {**job_item, "startedAt": datetime.datetime.now().isoformat()}
     clear_comfyui_log()
     if deps:
-        prompt = install_prompt_deps(prompt, deps, job_item)
+        try:
+            prompt = install_prompt_deps(prompt, deps, job_item)
+        except Exception as e:
+            print('❌Error install_prompt_deps:', str(e))
+            updateRunJobLogs({"id": job["id"], 
+                **job_item,
+                "status": "FAIL", 
+                "finishedAt": datetime.datetime.now().isoformat(),
+                "error": f"Error installing prompt dependencies: {str(e)+ traceback.format_exc()}",
+                "duration": time.perf_counter() - time_start,
+            })
+            return {"error": f"Error installing prompt dependencies: {str(e)}"}
     time_finish_install = time.perf_counter()
-    install_finish_timestamp = datetime.datetime.now().isoformat()
+    job_item = {**job_item, "installFinishedAt": datetime.datetime.now().isoformat()}
     # Make sure that the ComfyUI API is available
     server_online = check_server(
         f"http://{COMFY_HOST}",
@@ -321,8 +340,6 @@ def handler(job):
         updateRunJobLogs({"id": job["id"], 
                 **job_item,
                 "status": "FAIL", 
-                "startedAt": start_timestamp,
-                "installFinishedAt": install_finish_timestamp,
                 "finishedAt": datetime.datetime.now().isoformat(),
                 "error": f"Error queuing workflow: {str(e)}",
                 "duration": time.perf_counter() - time_start,
@@ -340,7 +357,7 @@ def handler(job):
             history = get_history(prompt_id)
             if retries % 5 == 0:
                 # update log in ddb
-                updateRunJobLogsThread({"id": job["id"], **job_item, "status": "RUNNING", "startedAt": start_timestamp})
+                updateRunJobLogsThread({"id": job["id"], **job_item, "status": "RUNNING"})
 
             # Exit the loop if we have found the history
             if prompt_id in history and history[prompt_id].get("outputs"):
@@ -362,8 +379,6 @@ def handler(job):
     updateRunJobLogs({"id": job["id"], 
         **job_item,
         "status": "FAIL" if error else "SUCCESS", 
-        "startedAt": start_timestamp,
-        "installFinishedAt": install_finish_timestamp,
         "finishedAt": datetime.datetime.now().isoformat(),
         "output": images_result.get("images", None),
         "error": error,
