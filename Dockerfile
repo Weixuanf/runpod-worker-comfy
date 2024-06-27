@@ -20,6 +20,8 @@ RUN apt-get update && apt-get install -y \
 # Clean up to reduce image size
 RUN apt-get autoremove -y && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 RUN pip3 install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+RUN  pip install --no-cache-dir xformers --no-deps
+RUN  pip install insightface
 
 # Clone ComfyUI repository
 RUN git clone --branch master --single-branch --depth 1 https://github.com/comfyanonymous/ComfyUI /comfyui
@@ -38,15 +40,20 @@ RUN pip3 install runpod requests boto3 nanoid
 # Go back to the root
 WORKDIR /
 
-ADD scripts /scripts/
-RUN python3 /scripts/install_custom_nodes.py
+ADD scripts/manager_copy.py scripts/install_custom_nodes_BASIC.py ./scripts/
+RUN python3 /scripts/install_custom_nodes_BASIC.py
+
+ADD scripts/install_custom_nodes_EXTRA.py ./scripts/
+RUN python3 /scripts/install_custom_nodes_EXTRA.py
+
+ADD scripts/put_files_in_models_folder.py ./scripts/
+RUN python3 /scripts/put_files_in_models_folder.py
 
 # Add the start and the handler
 ADD start.sh rp_handler.py test_input.json ./
 ADD extra_model_paths.yaml /comfyui/
 ADD app/ /app/
 
-# RUN python3 install_custom_nodes.py
 RUN chmod +x /start.sh
 
 # Start the container
