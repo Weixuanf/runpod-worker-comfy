@@ -27,37 +27,40 @@ class GitProgress(RemoteProgress):
         self.pbar.pos = 0
         self.pbar.refresh()
 
-def gitclone_install(files):
+def gitclone_install(files: dict[str, str]):
     print(f"install: {files}")
-    for url in files:
+    for url,commit_hash in files.items():
         # if not is_valid_url(url):
         #     print(f"Invalid git url: '{url}'")
         #     return False
 
         if url.endswith("/"):
             url = url[:-1]
-        try:
-            print(f"Download: git clone '{url}'")
-            repo_name = os.path.splitext(os.path.basename(url))[0]
-            repo_path = os.path.join(custom_nodes_path, repo_name)
+        
+        print(f"Download: git clone '{url}'")
+        repo_name = os.path.splitext(os.path.basename(url))[0]
+        repo_path = os.path.join(custom_nodes_path, repo_name)
 
-            # Clone the repository from the remote URL
-            if None:
-            # if platform.system() == 'Windows':
-                res = run_script([sys.executable, git_script_path, "--clone", custom_nodes_path, url])
-                if res != 0:
-                    return False
-            else:
-                repo = git.Repo.clone_from(url, repo_path, recursive=True, progress=GitProgress())
-                repo.git.clear_cache()
-                repo.close()
-
-            if not execute_install_script(url, repo_path):
+        # Clone the repository from the remote URL
+        if None:
+        # if platform.system() == 'Windows':
+            res = run_script([sys.executable, git_script_path, "--clone", custom_nodes_path, url])
+            if res != 0:
                 return False
+        else:
+            repo = git.Repo.clone_from(url, repo_path, recursive=True, progress=GitProgress())
 
-        except Exception as e:
-            print(f"Install(git-clone) error: {url} / {e}", file=sys.stderr)
+            # Checkout to the specified commit hash if it's not None
+            if commit_hash is not None:
+                repo.git.checkout(commit_hash)
+
+            repo.git.clear_cache()
+            repo.close()
+
+        if not execute_install_script(url, repo_path):
+            raise Exception(f"Failed to install {url}")
             return False
+
 
     print("Installation was successful.")
     return True

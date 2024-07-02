@@ -31,6 +31,8 @@ def updateRunJob(item):
 def updateRunJobLogs(item):
     with open(COMFYUI_LOG_PATH, 'r', encoding='utf-8') as f:
         content = f.read()
+        if (item.get('finishedAt') is not None):
+            print('🦄finished job, comfy logs:', content)
         return updateRunJob({
             **item,
             'logs': content

@@ -32,6 +32,11 @@ def install_prompt_deps(prompt,deps, new_job):
             raise ValueError('folderName or download_url not found in model',model)
         model_exists = False
         # Check if model cache exists in the EXTRA_MODEL_PATH
+        origin_name_file_path = os.path.join(EXTRA_MODEL_PATH, folder, filename)
+        if(model.get('keepName', False) and os.path.exists(origin_name_file_path)):
+            print(f"👌Model file {filename} exists in {origin_name_file_path}")
+            model_exists = True
+            continue
         if filehash:
             base_name, extension = os.path.splitext(filename)
             hash_file_path = os.path.join(EXTRA_MODEL_PATH, folder, HASHED_FILENAME_PREFIX+ filehash + extension)
