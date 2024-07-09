@@ -15,7 +15,8 @@ RUN apt-get update && apt-get install -y \
     git \
     wget \
     libgl1 \
-    libglib2.0-0
+    libglib2.0-0 \
+    curl
 
 # Clean up to reduce image size
 RUN apt-get autoremove -y && apt-get clean -y && rm -rf /var/lib/apt/lists/*

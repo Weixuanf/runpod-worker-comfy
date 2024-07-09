@@ -224,8 +224,6 @@ def process_output_images(outputs: Outputs):
         return {
             "error": "No outputs found",
         }
-    # The path where ComfyUI stores the generated images
-    COMFY_OUTPUT_PATH = os.environ.get("COMFY_OUTPUT_PATH", f"{COMFYUI_PATH}/output")
 
     output_images = []
     """ example outputs: {
@@ -249,13 +247,15 @@ def process_output_images(outputs: Outputs):
                 try:
                     subfolder = image.get("subfolder", "")
                     type = image.get("type", "output")
-                    output_images.append(os.path.join(subfolder, image.get("filename")))
+                    image_path = os.path.join(COMFYUI_PATH, type, subfolder, image.get("filename"))
+                    if image_path not in output_images:
+                        output_images.append(image_path)
                 except Exception as e:
                     print(f"Error processing output in: node [{node_id}] {image} - {e}")
                     print(traceback.format_exc())
             
     # Path correction if needed
-    output_images = [f"{COMFYUI_PATH}/{type}/{filename}" for filename in output_images]
+    # output_images = [f"{COMFYUI_PATH}/{type}/{filename}" for filename in output_images]
     print(f"output image path: {output_images}")
     results = []
     # Process images in parallel
@@ -279,6 +279,7 @@ def handler(job):
     print(f"🧪🧪handler received job", job['id'])
     job_input = job["input"]
     if job_input.get('object_info', False):
+        print('📡 Getting object_info....')
         server_online = check_server(
             f"http://{COMFY_HOST}",
             COMFY_API_AVAILABLE_MAX_RETRIES, # 15sec
@@ -287,7 +288,10 @@ def handler(job):
         if not server_online:
             return {"error": "ComfyUI API is not available, please try again later."}
         resp = requests.get(f'{COMFY_HOST_URL}/object_info')
-        return resp.json()
+        dict_resp = json.loads(resp.text)
+        print('📡object_info[KSampler]:', dict_resp.get('KSampler'))
+        return {'object_info_str': resp.text}
+
     job_item = job_input.get('jobItem', {})
     job_item = {**job_item, 'id': job['id']}
 
