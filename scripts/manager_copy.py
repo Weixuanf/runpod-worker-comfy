@@ -28,8 +28,9 @@ class GitProgress(RemoteProgress):
         self.pbar.refresh()
 
 def gitclone_install(files: dict[str, str]):
-    print(f"install: {files}")
-    for url,commit_hash in files.items():
+    for url,node in files.items():
+        commit_hash = node.get('hash', None)
+        print(f"Installing: {url} 👉 commit: {commit_hash}")
         # if not is_valid_url(url):
         #     print(f"Invalid git url: '{url}'")
         #     return False
@@ -53,6 +54,7 @@ def gitclone_install(files: dict[str, str]):
             # Checkout to the specified commit hash if it's not None
             if commit_hash is not None:
                 repo.git.checkout(commit_hash)
+                print(f"🦄Checkout to commit hash: {commit_hash}")
 
             repo.git.clear_cache()
             repo.close()

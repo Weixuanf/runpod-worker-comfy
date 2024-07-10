@@ -25,7 +25,8 @@ RUN  pip install --no-cache-dir xformers --no-deps
 RUN  pip install insightface
 
 # Clone ComfyUI repository
-RUN git clone --branch master --single-branch --depth 1 https://github.com/comfyanonymous/ComfyUI /comfyui
+# RUN git clone --branch master --single-branch --depth 1 https://github.com/comfyanonymous/ComfyUI /comfyui
+RUN git clone --branch master --single-branch https://github.com/comfyanonymous/ComfyUI /comfyui
 
 RUN git clone --branch main --single-branch --depth 1 https://github.com/ltdrdata/ComfyUI-Manager /comfyui/custom_nodes/ComfyUI-Manager
 
@@ -41,11 +42,11 @@ RUN pip3 install runpod requests boto3 nanoid
 # Go back to the root
 WORKDIR /
 
-ADD scripts/manager_copy.py scripts/install_custom_nodes_BASIC.py ./scripts/
+ADD scripts/manager_copy.py scripts/install_custom_nodes_BASIC.py scripts/deps.json ./scripts/
 RUN python3 /scripts/install_custom_nodes_BASIC.py
 
-ADD scripts/install_custom_nodes_EXTRA.py ./scripts/
-RUN python3 /scripts/install_custom_nodes_EXTRA.py
+# ADD scripts/install_custom_nodes_EXTRA.py ./scripts/
+# RUN python3 /scripts/install_custom_nodes_EXTRA.py
 
 ADD scripts/put_files_in_models_folder.py ./scripts/
 RUN python3 /scripts/put_files_in_models_folder.py

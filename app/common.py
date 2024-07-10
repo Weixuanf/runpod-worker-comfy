@@ -1,7 +1,6 @@
 import os
 CONTAINER_ROOT = os.path.dirname(os.path.dirname(__file__))
-# COMFYUI_PATH = os.path.join(CONTAINER_ROOT, 'comfyui')
-COMFYUI_PATH = os.environ.get("COMFYUI_PATH", "/comfyui")  #network volume
+COMFYUI_PATH = os.environ.get("COMFYUI_PATH", "/comfyui")  
 COMFYUI_LOG_PATH = '/comfyui.log'
 print(f'👉COMFYUI_PATH: {COMFYUI_PATH}')
 COMFYUI_PORT = "8080"
