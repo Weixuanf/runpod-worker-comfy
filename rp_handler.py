@@ -248,7 +248,7 @@ def process_output_images(outputs: Outputs):
                     subfolder = image.get("subfolder", "")
                     type = image.get("type", "output")
                     image_path = os.path.join(COMFYUI_PATH, type, subfolder, image.get("filename"))
-                    if image_path not in output_images:
+                    if image_path not in output_images and type == "output": # only process output images, no temp images
                         output_images.append(image_path)
                 except Exception as e:
                     print(f"Error processing output in: node [{node_id}] {image} - {e}")
@@ -289,7 +289,6 @@ def handler(job):
             return {"error": "ComfyUI API is not available, please try again later."}
         resp = requests.get(f'{COMFY_HOST_URL}/object_info')
         dict_resp = json.loads(resp.text)
-        print('📡object_info[KSampler]:', dict_resp.get('KSampler'))
         return {'object_info_str': resp.text}
 
     job_item = job_input.get('jobItem', {})
