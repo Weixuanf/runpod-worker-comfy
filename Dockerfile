@@ -56,6 +56,12 @@ ADD start.sh rp_handler.py test_input.json ./
 ADD extra_model_paths.yaml /comfyui/
 ADD app/ /app/
 
+# Install cloudflared
+RUN wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb \
+    && dpkg -i cloudflared-linux-amd64.deb
+
+EXPOSE 8080
+
 RUN chmod +x /start.sh
 
 # Start the container

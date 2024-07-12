@@ -15,9 +15,9 @@ cd $comfyui_path
 
 if [ "$DISABLE_RUNPOD_HANDLER" = "true" ]; then
     echo "DISABLE_RUNPOD_HANDLER is set to true. Running ComfyUI directly and streaming logs to console."
-    exec python3 main.py --port 8080
+    exec python3 main.py --port 8080 --listen
 else
-    python3 main.py --port 8080 >> "${comfy_log_path}" 2>&1 &
+    python3 main.py --port 8080 --listen >> "${comfy_log_path}" 2>&1 &
 
     echo "Starting RunPod Handler"
     # Serve the API and don't shutdown the container

@@ -1,3 +1,4 @@
+import subprocess
 import traceback
 import runpod
 import datetime
@@ -10,13 +11,13 @@ import requests
 import base64
 from io import BytesIO
 from dotenv import load_dotenv
-from app.ddb_utils import finishJobWithError, updateRunJobLogsThread, updateRunJobLogs
+from app.ddb_utils import finishJobWithError, updateRunJob, updateRunJobLogsThread, updateRunJobLogs
 from app.install_prompt_deps import install_prompt_deps, rename_file_with_hash
 from app.logUtils import clear_comfyui_log
 from app.s3_utils import upload_file_to_s3
 from concurrent.futures import ThreadPoolExecutor, as_completed
 load_dotenv()
-from app.common import COMFY_API_AVAILABLE_INTERVAL_MS, COMFY_HOST, COMFY_HOST_URL, COMFY_POLLING_INTERVAL_MS, COMFYUI_PATH, COMFYUI_LOG_PATH, IS_SCANNER_WORKER, COMFY_POLLING_MAX_RETRIES, COMFY_API_AVAILABLE_MAX_RETRIES, REFRESH_WORKER, restart_error
+from app.common import COMFY_API_AVAILABLE_INTERVAL_MS, COMFY_HOST, COMFY_HOST_URL, COMFY_POLLING_INTERVAL_MS, COMFYUI_PATH, COMFYUI_LOG_PATH, COMFYUI_PORT, COMFY_POLLING_MAX_RETRIES, COMFY_API_AVAILABLE_MAX_RETRIES, REFRESH_WORKER, restart_error
 import logging
 logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -278,6 +279,9 @@ def process_output_images(outputs: Outputs):
 def handler(job):
     print(f"🧪🧪handler received job", job['id'])
     job_input = job["input"]
+    job_item = job_input.get('jobItem', {})
+    job_item = {**job_item, 'id': job['id']}
+
     if job_input.get('object_info', False):
         print('📡 Getting object_info....')
         server_online = check_server(
@@ -290,9 +294,28 @@ def handler(job):
         resp = requests.get(f'{COMFY_HOST_URL}/object_info')
         dict_resp = json.loads(resp.text)
         return {'object_info_str': resp.text}
-
-    job_item = job_input.get('jobItem', {})
-    job_item = {**job_item, 'id': job['id']}
+    if job_input.get('comfyui', False):
+        print('📡 Starting up comfyui....')
+        server_online = check_server(
+            f"http://{COMFY_HOST}",
+            COMFY_API_AVAILABLE_MAX_RETRIES, # 15sec
+            COMFY_API_AVAILABLE_INTERVAL_MS,
+        )
+        if not server_online:
+            return {"error": "ComfyUI API is not available, please try again later."}
+        p = subprocess.Popen(["cloudflared", "tunnel", "--url", f"http://127.0.0.1:{COMFYUI_PORT}"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        tunnel_url = None
+        for line in p.stderr:
+            l = line.decode()
+            if "trycloudflare.com " in l:
+                print("👉This is the URL to access ComfyUI:", l[l.find("http"):], end='')
+                tunnel_url = True
+                break
+        if tunnel_url:
+            # Sleep for 600 seconds
+            time.sleep(1200)
+            return {'session': 'finished'}
+        return {'error': 'Error local tunneling comfyui'}
 
     # Make sure that the input is valid
     validated_data, error_message = validate_input(job_input)
