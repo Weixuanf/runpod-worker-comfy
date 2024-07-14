@@ -1,0 +1,14 @@
+version: 0.2
+
+env:
+  secrets-manager:
+    DEPOT_TOKEN: "arn:aws:secretsmanager:us-west-2:412414942595:secret:depot-user-api-jIBXlU"
+
+phases:
+  pre_build:
+    commands:
+      - echo Installing Depot CLI...
+      - curl -L https://depot.dev/install-cli.sh | DEPOT_INSTALL_DIR="/tmp/codebuild/bin" sh
+  build:
+    commands:
+      - depot build -t weixuanf/runpod-worker-comfy:latest --platform linux/amd64 .
