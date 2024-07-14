@@ -7,7 +7,7 @@ env:
 phases:
   pre_build:
     commands:
-      - ecr_stdin=$(aws ecr get-login-password --region <your-ecr-region>)
+      - ecr_stdin=$(aws ecr get-login-password --region us-west-1)
       - registry_auth=$(printf "AWS:$ecr_stdin" | openssl base64 -A)
       - mkdir $HOME/.docker
       - echo "{\"auths\":{\"<your-registry-url>\":{\"auth\":\"$registry_auth\"}}}" > $HOME/.docker/config.json
