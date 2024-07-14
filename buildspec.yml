@@ -11,4 +11,4 @@ phases:
       - curl -L https://depot.dev/install-cli.sh | DEPOT_INSTALL_DIR="/tmp/codebuild/bin" sh
   build:
     commands:
-      - depot build -t weixuanf/runpod-worker-comfy:latest --platform linux/amd64 .
+      - depot build -t weixuanf/runpod-worker-comfy:latest --platform linux/amd64 --build-arg DEPS_JSON=$DEPS_JSON .

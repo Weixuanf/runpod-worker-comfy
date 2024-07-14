@@ -39,6 +39,10 @@ RUN pip3 install -r requirements.txt \
 
 RUN pip3 install runpod requests boto3 nanoid
 
+# Set the DEPS_JSON environment variable to pass comfyui snapshot
+ARG DEPS_JSON
+ENV DEPS_JSON=${DEPS_JSON}
+
 # Go back to the root
 WORKDIR /
 
