@@ -7,8 +7,12 @@ env:
 phases:
   pre_build:
     commands:
+      - ecr_stdin=$(aws ecr get-login-password --region <your-ecr-region>)
+      - registry_auth=$(printf "AWS:$ecr_stdin" | openssl base64 -A)
+      - mkdir $HOME/.docker
+      - echo "{\"auths\":{\"<your-registry-url>\":{\"auth\":\"$registry_auth\"}}}" > $HOME/.docker/config.json
       - echo Installing Depot CLI...
       - curl -L https://depot.dev/install-cli.sh | DEPOT_INSTALL_DIR="/tmp/codebuild/bin" sh
   build:
     commands:
-      - depot build -t weixuanf/runpod-worker-comfy:latest --platform linux/amd64 --build-arg DEPS_JSON="$DEPS_JSON" .
+      - depot build -t 412414942595.dkr.ecr.us-west-1.amazonaws.com/runpod-worker-comfy:latest --push --platform linux/amd64 --build-arg DEPS_JSON="$DEPS_JSON" .
