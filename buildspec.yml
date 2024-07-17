@@ -4,6 +4,7 @@ env:
   secrets-manager:
     DEPOT_TOKEN: "arn:aws:secretsmanager:us-west-2:412414942595:secret:depot-user-api-jIBXlU:DEPOT_TOKEN"
     WEBHOOK_API_KEY: "arn:aws:secretsmanager:us-west-2:412414942595:secret:depot-user-api-jIBXlU:WEBHOOK_API_KEY"
+    DOCKER_AUTH: "arn:aws:secretsmanager:us-west-2:412414942595:secret:depot-user-api-jIBXlU:DOCKER_AUTH"
   variables:
     MACHINE_ID: ${MACHINE_ID}
     WEBHOOK_ENDPOINT: ${WEBHOOK_ENDPOINT}
@@ -14,7 +15,7 @@ phases:
       - ecr_stdin=$(aws ecr get-login-password --region us-west-2)
       - registry_auth=$(printf "AWS:$ecr_stdin" | openssl base64 -A)
       - mkdir $HOME/.docker
-      - echo "{\"auths\":{\"public.ecr.aws\":{\"auth\":\"$registry_auth\"}}}" > $HOME/.docker/config.json
+      - echo "{\"auths\":{\"https://index.docker.io/v1/\":{\"auth\":\"$DOCKER_AUTH\"}}}" > $HOME/.docker/config.json
       - echo Installing Depot CLI...
       - curl -L https://depot.dev/install-cli.sh | DEPOT_INSTALL_DIR="/tmp/codebuild/bin" sh
   build:
