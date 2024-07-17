@@ -3,6 +3,10 @@ version: 0.2
 env:
   secrets-manager:
     DEPOT_TOKEN: "arn:aws:secretsmanager:us-west-2:412414942595:secret:depot-user-api-jIBXlU:DEPOT_TOKEN"
+    WEBHOOK_API_KEY: "arn:aws:secretsmanager:us-west-2:412414942595:secret:depot-user-api-jIBXlU:WEBHOOK_API_KEY"
+  variables:
+    MACHINE_ID: ${MACHINE_ID}
+    WEBHOOK_ENDPOINT: ${WEBHOOK_ENDPOINT}
 
 phases:
   pre_build:
@@ -16,3 +20,11 @@ phases:
   build:
     commands:
       - depot build -t $IMAGE_NAME --push --platform linux/amd64 --build-arg DEPS_JSON="$DEPS_JSON" .
+  post_build:
+    commands:
+      - BUILD_ID=$(echo $CODEBUILD_BUILD_ID | cut -d':' -f2)
+      - |
+        curl -X POST "$WEBHOOK_ENDPOINT" \
+          -H "Content-Type: application/json" \
+          -H "Authorization: Bearer $WEBHOOK_API_KEY" \
+          -d "{\"machineID\":\"$MACHINE_ID\",\"buildID\":\"$BUILD_ID\",\"imageName\":\"$IMAGE_NAME\"}"
