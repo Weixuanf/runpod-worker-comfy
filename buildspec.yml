@@ -7,6 +7,7 @@ env:
   variables:
     MACHINE_ID: ${MACHINE_ID}
     WEBHOOK_ENDPOINT: ${WEBHOOK_ENDPOINT}
+    BUILD_ID: ${BUILD_ID}
 
 phases:
   pre_build:
@@ -14,7 +15,7 @@ phases:
       - ecr_stdin=$(aws ecr get-login-password --region us-west-2)
       - registry_auth=$(printf "AWS:$ecr_stdin" | openssl base64 -A)
       - mkdir $HOME/.docker
-      - echo "{\"auths\":{\"412414942595.dkr.ecr.us-west-2.amazonaws.com\":{\"auth\":\"$registry_auth\"}}}" > $HOME/.docker/config.json
+      - echo "{\"auths\":{\"$ECR_DOMAIN\":{\"auth\":\"$registry_auth\"}}}" > $HOME/.docker/config.json
       - echo Installing Depot CLI...
       - curl -L https://depot.dev/install-cli.sh | DEPOT_INSTALL_DIR="/tmp/codebuild/bin" sh
   build:
@@ -23,7 +24,6 @@ phases:
   post_build:
     commands:
       - echo $WEBHOOK_ENDPOINT
-      - BUILD_ID=$(echo $CODEBUILD_BUILD_ID | cut -d':' -f2)
       - |
         curl -X POST "$WEBHOOK_ENDPOINT" \
           -H "Content-Type: application/json" \
