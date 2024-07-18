@@ -293,7 +293,7 @@ def handler(job):
             return {"error": "ComfyUI API is not available, please try again later."}
         resp = requests.get(f'{COMFY_HOST_URL}/object_info')
         dict_resp = json.loads(resp.text)
-        return {'object_info_str': resp.text}
+        return {'data': resp.text}
     if job_input.get('comfyui', False):
         print('📡 Starting up comfyui....')
         server_online = check_server(
