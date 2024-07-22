@@ -31,7 +31,7 @@ def create_safetensors_files(base_dir):
         clear_directory(root)
 
         encoded_path = encode_path(rel_path)
-        safetensors_filename = f"{encoded_path}.safetensors"
+        safetensors_filename = f"{encoded_path}.path.ckpt"
         safetensors_filepath = os.path.join(root, safetensors_filename)
         # Create the .safetensors file in the current directory
         try:
