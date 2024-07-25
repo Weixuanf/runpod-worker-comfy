@@ -26,7 +26,14 @@ phases:
       - echo $WEBHOOK_ENDPOINT
       - BUILD_ID=$(echo $CODEBUILD_BUILD_ID | cut -d':' -f2)
       - |
-        curl -X POST "$WEBHOOK_ENDPOINT" \
-          -H "Content-Type: application/json" \
-          -H "Authorization: Bearer $WEBHOOK_API_KEY" \
-          -d "{\"machineID\":\"$MACHINE_ID\",\"buildID\":\"$BUILD_ID\",\"imageName\":\"$IMAGE_NAME\"}"
+        if [ $? -eq 0 ]; then
+          curl -X POST "$WEBHOOK_ENDPOINT" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $WEBHOOK_API_KEY" \
+            -d "{\"machineID\":\"$MACHINE_ID\",\"buildID\":\"$BUILD_ID\",\"imageName\":\"$IMAGE_NAME\",\"status\":\"SUCCESS\"}"
+        else
+          curl -X POST "$WEBHOOK_ENDPOINT" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $WEBHOOK_API_KEY" \
+            -d "{\"machineID\":\"$MACHINE_ID\",\"buildID\":\"$BUILD_ID\",\"imageName\":\"$IMAGE_NAME\",\"status\":\"FAIL\"}"
+        fi

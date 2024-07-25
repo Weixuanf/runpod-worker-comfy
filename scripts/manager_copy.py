@@ -41,6 +41,9 @@ def gitclone_install(files: dict[str, str]):
         print(f"Download: git clone '{url}'")
         repo_name = os.path.splitext(os.path.basename(url))[0]
         repo_path = os.path.join(custom_nodes_path, repo_name)
+        if repo_name == "ComfyUI-Manager":
+            print(f"🦄 Skipping ComfyUI-Manager")
+            continue
 
         # Clone the repository from the remote URL
         if None:
@@ -60,6 +63,7 @@ def gitclone_install(files: dict[str, str]):
             repo.close()
 
         if not execute_install_script(url, repo_path):
+            print('🦄❌ Failed to install {url}')
             raise Exception(f"Failed to install {url}")
             return False
 
