@@ -1,5 +1,7 @@
 import json
 import subprocess
+
+import requests
 from manager_copy import gitclone_install
 import os
 
@@ -7,8 +9,23 @@ plugins_json = os.environ.get("DEPS_JSON", None)
 
 COMFYUI_PATH = os.environ.get("COMFYUI_PATH", "/comfyui") 
 
+def is_url(string):
+    if string.startswith("http://") or string.startswith("https://"):
+        return True
+
 if plugins_json:
-    plugins = json.loads(plugins_json)
+    if is_url(plugins_json):
+        response = requests.get(plugins_json)
+        if response.status_code == 200:
+            response_text = response.text.strip()
+            if response_text:
+                plugins = json.loads(response_text)
+            else:
+                plugins = {}
+        else:
+            raise Exception(f"❌Failed to fetch the URL: {response.status_code}")
+    else:
+        plugins = json.loads(plugins_json)
 else:
     if not os.path.exists("./scripts/deps.json"):
         raise Exception("❌deps.json not found")
@@ -22,7 +39,7 @@ custom_nodes = plugins.get("git_custom_nodes", {})
 # Checkout specific commit for comfyui
 if comfyui_commit:
     print(f"🦄Updating ComfyUI repository...")
-    
+
     update_result = subprocess.run(["git", "pull"], cwd=COMFYUI_PATH, capture_output=True, text=True)
     if update_result.returncode != 0:
         raise Exception(f"❌Git pull failed: {update_result.stderr}")
