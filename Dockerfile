@@ -39,12 +39,16 @@ RUN pip3 install -r requirements.txt \
 
 RUN pip3 install runpod requests boto3 nanoid
 
+# Go back to the root
+WORKDIR /
+
+# Install cloudflared
+RUN wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb \
+    && dpkg -i cloudflared-linux-amd64.deb
+
 # Set the DEPS_JSON environment variable to pass comfyui snapshot
 ARG DEPS_JSON
 ENV DEPS_JSON=${DEPS_JSON}
-
-# Go back to the root
-WORKDIR /
 
 ADD scripts/manager_copy.py scripts/install_custom_nodes_BASIC.py scripts/deps.json ./scripts/
 RUN python3 /scripts/install_custom_nodes_BASIC.py
@@ -56,10 +60,6 @@ RUN python3 /scripts/put_files_in_models_folder.py
 ADD start.sh rp_handler.py test_input.json ./
 ADD extra_model_paths.yaml /comfyui/
 ADD app/ /app/
-
-# Install cloudflared
-RUN wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb \
-    && dpkg -i cloudflared-linux-amd64.deb
 
 EXPOSE 8080
 
