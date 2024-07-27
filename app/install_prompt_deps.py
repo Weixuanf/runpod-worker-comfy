@@ -2,12 +2,8 @@ import hashlib
 import logging
 import os
 import shutil
-import subprocess
-import threading
-
-from app.ddb_utils import updateRunJobLogsThread
-from .logUtils import append_comfyui_log
-from .common import COMFYUI_MODEL_PATH, EXTRA_MODEL_PATH, HASHED_FILENAME_PREFIX,COMFYUI_PATH, start_subprocess
+from app.logUtils import start_subprocess
+from .common import COMFYUI_MODEL_PATH, EXTRA_MODEL_PATH, HASHED_FILENAME_PREFIX,COMFYUI_PATH
 
 TEMP_MODEL_PATH = '/'
 

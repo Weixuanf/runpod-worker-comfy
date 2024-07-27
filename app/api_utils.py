@@ -1,6 +1,5 @@
 import os
-
-from app.common import COMFYUI_MODEL_PATH, start_subprocess
+from app.logUtils import start_subprocess
 
 
 def list_models(directory):
