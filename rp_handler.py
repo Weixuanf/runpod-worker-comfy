@@ -11,13 +11,14 @@ import requests
 import base64
 from io import BytesIO
 from dotenv import load_dotenv
+from app.api_utils import list_volume_models
 from app.ddb_utils import finishJobWithError, updateRunJob, updateRunJobLogsThread, updateRunJobLogs
 from app.install_prompt_deps import install_prompt_deps, rename_file_with_hash
 from app.logUtils import clear_comfyui_log
 from app.s3_utils import upload_file_to_s3
 from concurrent.futures import ThreadPoolExecutor, as_completed
 load_dotenv()
-from app.common import COMFY_API_AVAILABLE_INTERVAL_MS, COMFY_HOST, COMFY_HOST_URL, COMFY_POLLING_INTERVAL_MS, COMFYUI_PATH, COMFYUI_LOG_PATH, COMFYUI_PORT, COMFY_POLLING_MAX_RETRIES, COMFY_API_AVAILABLE_MAX_RETRIES, REFRESH_WORKER, restart_error
+from app.common import COMFY_API_AVAILABLE_INTERVAL_MS, COMFY_HOST, COMFY_HOST_URL, COMFY_POLLING_INTERVAL_MS, COMFYUI_PATH, COMFYUI_LOG_PATH, COMFYUI_PORT, COMFY_POLLING_MAX_RETRIES, COMFY_API_AVAILABLE_MAX_RETRIES, EXTRA_MODEL_PATH, REFRESH_WORKER, restart_error
 import logging
 logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -294,6 +295,11 @@ def handler(job):
         resp = requests.get(f'{COMFY_HOST_URL}/object_info')
         dict_resp = json.loads(resp.text)
         return {'data': resp.text}
+    if job_input.get('list_models', False):
+        print('📡 Listing models....')
+        models_data = list_volume_models(EXTRA_MODEL_PATH)
+        return {'data': models_data}
+        
     if job_input.get('comfyui', False):
         print('📡 Starting up comfyui....')
         server_online = check_server(
@@ -411,7 +417,8 @@ def handler(job):
         "duration": time.perf_counter() - time_start,
         "inferenceDuration": time.perf_counter()  - time_finish_install,
     })
-    rename_file_with_hash()
+    # disable hash renaming
+    # rename_file_with_hash()
     return {**images_result, "refresh_worker": REFRESH_WORKER}
 
 if __name__ == "__main__":
