@@ -11,7 +11,7 @@ import requests
 import base64
 from io import BytesIO
 from dotenv import load_dotenv
-from app.api_utils import list_volume_models
+from app.api_utils import install_models, list_models
 from app.ddb_utils import finishJobWithError, updateRunJob, updateRunJobLogsThread, updateRunJobLogs
 from app.install_prompt_deps import install_prompt_deps, rename_file_with_hash
 from app.logUtils import clear_comfyui_log
@@ -297,7 +297,12 @@ def handler(job):
         return {'data': resp.text}
     if job_input.get('list_models', False):
         print('📡 Listing models....')
-        models_data = list_volume_models(EXTRA_MODEL_PATH)
+        models_data = list_models(EXTRA_MODEL_PATH)
+        return {'data': models_data}
+
+    if job_input.get('install_models', False):
+        print('📡 Listing models....')
+        models_data = install_models(job_input.get('install_models'), EXTRA_MODEL_PATH)
         return {'data': models_data}
         
     if job_input.get('comfyui', False):

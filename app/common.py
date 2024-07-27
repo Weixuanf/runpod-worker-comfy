@@ -1,4 +1,9 @@
 import os
+import subprocess
+import threading
+
+from app.ddb_utils import updateRunJobLogsThread
+from app.logUtils import append_comfyui_log
 CONTAINER_ROOT = os.path.dirname(os.path.dirname(__file__))
 COMFYUI_PATH = os.environ.get("COMFYUI_PATH", "/comfyui")  
 COMFYUI_LOG_PATH = '/comfyui.log'
@@ -26,3 +31,37 @@ REFRESH_WORKER = os.environ.get("REFRESH_WORKER", "false").lower() == "true"
 # for scanner
 IS_SCANNER_WORKER = os.environ.get('IS_SCANNER_WORKER', False)
 restart_error = ""
+
+
+def stream_output(process, stream_type, logError=False):
+    stream = process.stdout if stream_type == 'stdout' else process.stderr
+    count = 0
+    for line in iter(stream.readline, ''):
+        if count < 10 or count % 10 == 0: 
+            print(line.strip())
+            append_comfyui_log(line.strip())
+        count = count + 1
+
+def start_subprocess(cmd):
+    # Start the subprocess and redirect its output and error
+    subprocess_handle = subprocess.Popen(
+        cmd,
+        # env=env_vars,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        bufsize=1,
+        universal_newlines=True,
+        text=True
+    )
+
+    # Start threads to read the subprocess's output and error streams
+    stdout_thread = threading.Thread(target=stream_output, args=(subprocess_handle, 'stdout'))
+    stderr_thread = threading.Thread(target=stream_output, args=(subprocess_handle, 'stderr'))
+    stdout_thread.start()
+    stderr_thread.start()
+    # Wait for the subprocess to complete
+    subprocess_handle.wait()
+
+    # Wait also for all output to be processed (output threads to complete)
+    stdout_thread.join()
+    stderr_thread.join()

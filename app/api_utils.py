@@ -1,5 +1,7 @@
 import os
 
+from app.common import COMFYUI_MODEL_PATH, start_subprocess
+
 
 def list_models(directory):
     result = []
@@ -17,3 +19,20 @@ def list_models(directory):
             except FileNotFoundError:
                 print(f"Warning: Unable to access {path}. Skipping this path.")
                 continue
+
+def install_models(model_deps, dir):
+    for filename in model_deps:
+        model = model_deps.get(filename)
+        filehash = model.get('fileHash', model.get('hash'))
+        folder = model.get('fileFolder', model.get('folder'))
+        download_url = model.get('downloadUrl', model.get('url'))
+        # if download_url.startswith('https://civitai.com/'):
+        #     download_url += f'?token={civitai_token}'
+        
+        if not folder or not download_url:
+            raise ValueError('folderName or download_url not found in model',model)
+        
+        file_path = os.path.join(dir, folder, filename)
+        
+        print(f"⬇️Start downloading model from {download_url} to {file_path}")
+        start_subprocess(['wget','-O',file_path, download_url, '--progress=bar:force'])
