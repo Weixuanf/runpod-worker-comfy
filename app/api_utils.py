@@ -28,9 +28,12 @@ def install_models(model_deps, dir):
         #     download_url += f'?token={civitai_token}'
         
         if not folder or not download_url:
-            raise ValueError('folderName or download_url not found in model',model)
+            raise ValueError('folderName or download_url not found in model', model)
         
         file_path = os.path.join(dir, folder, filename)
         
-        print(f"⬇️Start downloading model from {download_url} to {file_path}")
-        start_subprocess(['wget','-O',file_path, download_url, '--progress=bar:force'])
+        # Create the directory if it doesn't exist
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        
+        print(f"⬇️ Start downloading model from {download_url} to {file_path}")
+        start_subprocess(['wget', '-O', file_path, download_url, '--progress=bar:force'])
