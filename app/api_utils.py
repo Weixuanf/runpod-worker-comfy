@@ -1,23 +1,24 @@
+import logging
 import os
 from app.logUtils import start_subprocess
 
 
-def list_models(directory):
-    result = []
-    dirs = {}
-    for dirpath, subdirs, filenames in os.walk(directory, followlinks=True, topdown=True):
-        subdirs[:] = [d for d in subdirs]
-        for file_name in filenames:
-            relative_path = os.path.relpath(os.path.join(dirpath, file_name), directory)
-            result.append(relative_path)
+supported_pt_extensions = ['.ckpt', '.pt', '.bin', '.pth', '.safetensors', '.pkl']
 
-        for d in subdirs:
-            path = os.path.join(dirpath, d)
-            try:
-                dirs[path] = os.path.getmtime(path)
-            except FileNotFoundError:
-                print(f"Warning: Unable to access {path}. Skipping this path.")
+def list_models(directory, extensions: list):
+    files = {}
+    for dirpath, _, filenames in os.walk(directory):
+        for filename in filenames:
+            ext = '.' + os.path.splitext(filename)[-1]
+            if extensions and ext not in extensions:
                 continue
+            filepath = os.path.join(dirpath, filename)
+            relative_path = os.path.relpath(filepath, directory)
+            files[relative_path] = {
+                "relPath": relative_path,
+                "size": os.path.getsize(filepath)
+            }
+    return files
 
 def install_models(model_deps, dir):
     for filename in model_deps:
