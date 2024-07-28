@@ -298,11 +298,11 @@ def handler(job):
     if job_input.get('list_models', False):
         print('📡 Listing models....')
         supported_pt_extensions = ['.ckpt', '.pt', '.bin', '.pth', '.safetensors', '.pkl']
-        models_data = list_models(EXTRA_MODEL_PATH, supported_pt_extensions)
+        models_data = list_models(EXTRA_MODEL_PATH)
         return {'data': models_data}
 
     if job_input.get('install_models', False):
-        print('📡 Listing models....')
+        print('📡 Installing models....')
         models_data = install_models(job_input.get('install_models'), EXTRA_MODEL_PATH)
         return {'data': models_data}
         

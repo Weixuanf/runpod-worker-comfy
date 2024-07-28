@@ -7,13 +7,14 @@ def list_models(directory, extensions: list):
     files = {}
     for dirpath, _, filenames in os.walk(directory):
         for filename in filenames:
+            print(f"filename: {filename}")
             ext = '.' + os.path.splitext(filename)[-1]
             if extensions and ext not in extensions:
                 continue
             filepath = os.path.join(dirpath, filename)
             relative_path = os.path.relpath(filepath, directory)
             files[relative_path] = {
-                "relPath": relative_path,
+                "path": relative_path,
                 "size": os.path.getsize(filepath)
             }
     return files
