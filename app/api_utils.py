@@ -3,8 +3,6 @@ import os
 from app.logUtils import start_subprocess
 
 
-supported_pt_extensions = ['.ckpt', '.pt', '.bin', '.pth', '.safetensors', '.pkl']
-
 def list_models(directory, extensions: list):
     files = {}
     for dirpath, _, filenames in os.walk(directory):
