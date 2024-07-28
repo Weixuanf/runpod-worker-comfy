@@ -3,7 +3,7 @@ import os
 from app.logUtils import start_subprocess
 
 
-def list_models(directory, extensions: list):
+def list_models(directory, extensions: list = None):
     files = {}
     for dirpath, _, filenames in os.walk(directory):
         for filename in filenames:
