@@ -104,7 +104,7 @@ def handle_stream(stream, prefix):
             else:
                 print(prefix, msg, end="")
 
-def execute_install_script(url, repo_path, lazy_mode=False):
+def execute_install_script(url, repo_path, lazy_mode=False, instant_execution=False):
     install_script_path = os.path.join(repo_path, "install.py")
     requirements_path = os.path.join(repo_path, "requirements.txt")
 
@@ -117,46 +117,24 @@ def execute_install_script(url, repo_path, lazy_mode=False):
             with open(requirements_path, "r") as requirements_file:
                 for line in requirements_file:
                     package_name = line.strip()
-                    if package_name:
+                    if package_name and not package_name.startswith('#'):
                         install_cmd = [sys.executable, "-m", "pip", "install", package_name]
-                        if package_name.strip() != "":
-                            try_install_script(url, repo_path, install_cmd)
+                        if package_name.strip() != "" and not package_name.startswith('#'):
+                            try_install_script(url, repo_path, install_cmd, instant_execution=instant_execution)
 
         if os.path.exists(install_script_path):
             print(f"Install: install script")
             install_cmd = [sys.executable, "install.py"]
-            try_install_script(url, repo_path, install_cmd)
+            try_install_script(url, repo_path, install_cmd, instant_execution=instant_execution)
 
     return True
 
-def try_install_script(url, repo_path, install_cmd):
-    if None:
-    # if platform.system() == "Windows" and comfy_ui_commit_datetime.date() >= comfy_ui_required_commit_datetime.date():
-        # if not os.path.exists(startup_script_path):
-        #     os.makedirs(startup_script_path)
+def try_install_script(url, repo_path, install_cmd, instant_execution=False):
+    print(f"\n## ComfyUI-Manager: EXECUTE => {install_cmd}")
+    code = run_script(install_cmd, cwd=repo_path)
 
-        # script_path = os.path.join(startup_script_path, "install-scripts.txt")
-        # with open(script_path, "a") as file:
-        #     obj = [repo_path] + install_cmd
-        #     file.write(f"{obj}\n")
-
-        return True
-    else:
-        print(f"\n## ComfyUI-Manager: EXECUTE => {install_cmd}")
-        code = run_script(install_cmd, cwd=repo_path)
-
-        # if platform.system() == "Windows":
-        #     try:
-        #         if comfy_ui_commit_datetime.date() < comfy_ui_required_commit_datetime.date():
-        #             print("\n\n###################################################################")
-        #             print(f"[WARN] ComfyUI-Manager: Your ComfyUI version ({comfy_ui_revision})[{comfy_ui_commit_datetime.date()}] is too old. Please update to the latest version.")
-        #             print(f"[WARN] The extension installation feature may not work properly in the current installed ComfyUI version on Windows environment.")
-        #             print("###################################################################\n\n")
-        #     except:
-        #         pass
-
-        if code != 0:
-            if url is None:
-                url = os.path.dirname(repo_path)
-            print(f"install script failed: {url}")
-            return False
+    if code != 0:
+        if url is None:
+            url = os.path.dirname(repo_path)
+        print(f"install script failed: {url}")
+        return False

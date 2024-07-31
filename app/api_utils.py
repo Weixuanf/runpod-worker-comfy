@@ -17,7 +17,6 @@ def list_models(directory, extensions: list = None):
             size_kb = size_bytes / 1024
             size_mb = size_kb / 1024
             files[relative_path] = {
-                "path": relative_path,
                 "sizeB": size_bytes,
                 "sizeKB": size_kb
             }
