@@ -50,6 +50,7 @@ if comfyui_commit:
         raise Exception(f"❌Git checkout failed: {result.stderr}")
     
 gitclone_install(custom_nodes)
+print('\n\n 👌Finished installing custom nodes. 🦄Installing pip packages...')
 install_pip_packages(plugins.get("pip_overrides", {}))
 
 
