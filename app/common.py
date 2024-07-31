@@ -29,3 +29,6 @@ REFRESH_WORKER = os.environ.get("REFRESH_WORKER", "false").lower() == "true"
 # for scanner
 IS_SCANNER_WORKER = os.environ.get('IS_SCANNER_WORKER', False)
 restart_error = ""
+
+# global job for job update db
+job = None

@@ -12,7 +12,7 @@ import base64
 from io import BytesIO
 from dotenv import load_dotenv
 from app.api_utils import install_models, list_models
-from app.ddb_utils import finishJobWithError, updateRunJob, updateRunJobLogsThread, updateRunJobLogs
+from app.ddb_utils import finishJobWithError, start_tunnel_thread, updateRunJob, updateRunJobLogsThread, updateRunJobLogs
 from app.install_prompt_deps import install_prompt_deps, rename_file_with_hash
 from app.logUtils import clear_comfyui_log
 from app.s3_utils import upload_file_to_s3
@@ -353,7 +353,6 @@ def handler(job):
                 "duration": time.perf_counter() - time_start,
             })
             return {"error": f"Error installing prompt dependencies: {str(e)}"}
-    time_finish_install = time.perf_counter()
     job_item = {**job_item, "installFinishedAt": datetime.datetime.now().isoformat()}
     # Make sure that the ComfyUI API is available
     server_online = check_server(
@@ -372,6 +371,7 @@ def handler(job):
         queued_workflow = queue_workflow(prompt)
         prompt_id = queued_workflow["prompt_id"]
         updateRunJobLogsThread({"id": job["id"], **job_item, "status": "RUNNING", })
+        start_tunnel_thread(job_item)
         print(f"runpod-worker-comfy queued workflow with ID {prompt_id}")
     except Exception as e:
         print('❌Error queue_workflow:', str(e))
@@ -381,7 +381,6 @@ def handler(job):
                 "finishedAt": datetime.datetime.now().isoformat(),
                 "error": f"Error queuing workflow: {str(e)}",
                 "duration": time.perf_counter() - time_start,
-                "inferenceDuration": time.perf_counter()  - time_finish_install,
             })
         return {"error": f"Error queuing workflow: {str(e)}"}
 
@@ -421,7 +420,6 @@ def handler(job):
         "output": images_result.get("images", None),
         "error": error,
         "duration": time.perf_counter() - time_start,
-        "inferenceDuration": time.perf_counter()  - time_finish_install,
     })
     # disable hash renaming
     # rename_file_with_hash()
