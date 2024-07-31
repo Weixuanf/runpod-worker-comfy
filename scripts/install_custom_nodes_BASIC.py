@@ -2,7 +2,7 @@ import json
 import subprocess
 
 import requests
-from manager_copy import gitclone_install
+from manager_copy import gitclone_install, install_pip_packages
 import os
 
 plugins_json = os.environ.get("DEPS_JSON", None)
@@ -50,7 +50,7 @@ if comfyui_commit:
         raise Exception(f"❌Git checkout failed: {result.stderr}")
     
 gitclone_install(custom_nodes)
-        
+install_pip_packages(plugins.get("pip_overrides", {}))
 
 
 # BASIC_CUSTOM_NODES_REPO = {

@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import threading
 import locale
@@ -13,7 +14,7 @@ import git
 from git.remote import RemoteProgress
 
 COMFYUI_PATH = "/comfyui"  #network volume
-
+pip_downgrade_blacklist = ['torch', 'torchsde', 'torchvision', 'transformers', 'safetensors', 'kornia']
 custom_nodes_path = os.path.join(COMFYUI_PATH, "custom_nodes")
 
 class GitProgress(RemoteProgress):
@@ -120,16 +121,24 @@ def execute_install_script(url, repo_path, lazy_mode=False, instant_execution=Fa
                     if package_name and not package_name.startswith('#'):
                         install_cmd = [sys.executable, "-m", "pip", "install", package_name]
                         if package_name.strip() != "" and not package_name.startswith('#'):
-                            try_install_script(url, repo_path, install_cmd, instant_execution=instant_execution)
+                            if not try_install_script(url, repo_path, install_cmd, instant_execution=instant_execution):
+                                print(f"🦄❌ Error: Failed to pip install {package_name} in {repo_path}")
+                                return False
 
         if os.path.exists(install_script_path):
             print(f"Install: install script")
             install_cmd = [sys.executable, "install.py"]
-            try_install_script(url, repo_path, install_cmd, instant_execution=instant_execution)
-
+            if not try_install_script(url, repo_path, install_cmd, instant_execution=instant_execution):
+                print(f"🦄❌ Error: Failed to install install.py in {repo_path}")
+                return False
     return True
 
 def try_install_script(url, repo_path, install_cmd, instant_execution=False):
+    if len(install_cmd) == 5 and install_cmd[2:4] == ['pip', 'install']:
+        if is_blacklisted(install_cmd[4]):
+            print(f"[ComfyUI-Manager] skip black listed pip installation: '{install_cmd[4]}'")
+            return True
+
     print(f"\n## ComfyUI-Manager: EXECUTE => {install_cmd}")
     code = run_script(install_cmd, cwd=repo_path)
 
@@ -138,3 +147,55 @@ def try_install_script(url, repo_path, install_cmd, instant_execution=False):
             url = os.path.dirname(repo_path)
         print(f"install script failed: {url}")
         return False
+    return True
+
+def is_blacklisted(name):
+    name = name.strip()
+
+    pattern = r'([^<>!=]+)([<>!=]=?)(.*)'
+    match = re.search(pattern, name)
+
+    if match:
+        name = match.group(1)
+
+    if name in pip_downgrade_blacklist:
+        return True
+        # pips = get_installed_packages()
+
+        # if match is None:
+        #     if name in pips:
+        #         return True
+        # elif match.group(2) in ['<=', '==', '<']:
+        #     if name in pips:
+        #         if StrictVersion(pips[name]) >= StrictVersion(match.group(3)):
+        #             return True
+
+    return False
+
+def get_installed_packages():
+    global pip_map
+
+    if pip_map is None:
+        try:
+            result = subprocess.check_output([sys.executable, '-m', 'pip', 'list'], universal_newlines=True)
+
+            pip_map = {}
+            for line in result.split('\n'):
+                x = line.strip()
+                if x:
+                    y = line.split()
+                    if y[0] == 'Package' or y[0].startswith('-'):
+                        continue
+
+                    pip_map[y[0]] = y[1]
+        except subprocess.CalledProcessError as e:
+            print(f"[ComfyUI-Manager] Failed to retrieve the information of installed pip packages.")
+            return set()
+
+    return pip_map
+
+def install_pip_packages(packages: dict):
+    for package in packages:
+        print(f"\n\n 🦄Installing pip package: {package}")
+        run_script([sys.executable, "-m", "pip", "install", package])
+            
