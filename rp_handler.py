@@ -354,6 +354,7 @@ def handler(job):
             })
             return {"error": f"Error installing prompt dependencies: {str(e)}"}
     job_item = {**job_item, "installFinishedAt": datetime.datetime.now().isoformat()}
+    updateRunJobLogsThread({**job_item })
     # Make sure that the ComfyUI API is available
     server_online = check_server(
         f"http://{COMFY_HOST}",
