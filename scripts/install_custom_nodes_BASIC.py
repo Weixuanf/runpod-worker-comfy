@@ -2,7 +2,7 @@ import json
 import subprocess
 
 import requests
-from manager_copy import gitclone_install, install_pip_packages
+from manager_copy import gitclone_install, install_models_to_docker_image, install_pip_packages
 import os
 
 plugins_json = os.environ.get("DEPS_JSON", None)
@@ -53,7 +53,7 @@ gitclone_install(custom_nodes)
 print('\n\n 👌Finished installing custom nodes. 🦄Installing pip packages...')
 install_pip_packages(plugins.get("pip_overrides", {}))
 
-
+install_models_to_docker_image(plugins)
 # BASIC_CUSTOM_NODES_REPO = {
 #     "https://github.com/ltdrdata/ComfyUI-Impact-Pack": 'aad58a99bf6dfb2fededea82a011c1e72418bff4',
 #     "https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite": '1f46b5c3ae9b4e30f721bee83d9cb7b9f270d8cd',

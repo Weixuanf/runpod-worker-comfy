@@ -199,3 +199,28 @@ def install_pip_packages(packages: dict):
         print(f"\n\n 🦄Installing pip package: {package}")
         run_script([sys.executable, "-m", "pip", "install", package])
             
+
+import os
+import subprocess
+# bake models into docker image
+def install_models_to_docker_image(snapshot: dict):
+    models = snapshot.get('models', {})
+    for path, model in models.items():
+        file_path = os.path.join(COMFYUI_PATH, 'models', path)
+        url = model.get('url')
+        if not url:
+            raise ValueError('❌🦄 Error: download url not found for model', path)
+        
+        # Ensure the directory exists
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        
+        print(f"\n ⬇️Downloading model: {url} to {file_path}")
+        
+        # Download the model using wget
+        try:
+            # '--progress=bar:force' shows the progress bar
+            subprocess.run(['wget', '--progress=bar:force', '-O', file_path, url], check=True)
+            print(f"👌 Successfully downloaded model to {file_path}")
+        except subprocess.CalledProcessError as e:
+            print(f"❌ Error downloading model: {path} from {url}")
+            raise e
