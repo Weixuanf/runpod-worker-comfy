@@ -298,8 +298,12 @@ def handler(job):
     if job_input.get('list_models', False):
         print('📡 Listing models....')
         supported_pt_extensions = ['.ckpt', '.pt', '.bin', '.pth', '.safetensors', '.pkl']
-        models_data = list_models(EXTRA_MODEL_PATH)
-        return {'data': models_data}
+        models_data1 = list_models(EXTRA_MODEL_PATH, 'volume')
+        models_data2 = list_models(os.path.join(COMFYUI_PATH, 'models'), 'native')
+        return {'data': {
+            **models_data1,
+            **models_data2,
+        }}
 
     if job_input.get('install_models', False):
         print('📡 Installing models....')

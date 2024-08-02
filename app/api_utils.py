@@ -3,7 +3,7 @@ import os
 from app.logUtils import start_subprocess
 
 
-def list_models(directory, extensions: list = None):
+def list_models(directory, type: str, extensions: list = None, ):
     files = {}
     for dirpath, _, filenames in os.walk(directory):
         for filename in filenames:
@@ -18,7 +18,8 @@ def list_models(directory, extensions: list = None):
             size_mb = size_kb / 1024
             files[relative_path] = {
                 "sizeB": size_bytes,
-                "sizeKB": size_kb
+                "sizeKB": size_kb,
+                "type": type,
             }
     return files
 
