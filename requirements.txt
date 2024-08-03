@@ -1,4 +1,13 @@
-runpod==1.3.6
-aiohttp
+runpod
+nanoid
 boto3
 requests
+#ComfyUI-Manager requirements
+GitPython
+PyGithub
+matrix-client==0.4.0
+transformers
+huggingface-hub>0.20
+typer
+rich
+typing-extensions

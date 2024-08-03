@@ -28,20 +28,18 @@ RUN  pip install insightface
 # RUN git clone --branch master --single-branch --depth 1 https://github.com/comfyanonymous/ComfyUI /comfyui
 RUN git clone --branch master --single-branch https://github.com/comfyanonymous/ComfyUI /comfyui
 
-RUN git clone --branch main --single-branch --depth 1 https://github.com/ltdrdata/ComfyUI-Manager /comfyui/custom_nodes/ComfyUI-Manager
+# RUN git clone --branch main --single-branch --depth 1 https://github.com/ltdrdata/ComfyUI-Manager /comfyui/custom_nodes/ComfyUI-Manager
 
 # Change working directory to ComfyUI
 WORKDIR /comfyui
 
 # Install ComfyUI dependencies
 RUN pip3 install -r requirements.txt \
-    && pip3 install -r custom_nodes/ComfyUI-Manager/requirements.txt
-
-RUN pip3 install runpod requests boto3 nanoid
 
 # Go back to the root
 WORKDIR /
-
+RUN pip3 install -r requirements.txt
+# RUN pip3 install runpod requests boto3 nanoid
 # Install cloudflared
 RUN wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb \
     && dpkg -i cloudflared-linux-amd64.deb
