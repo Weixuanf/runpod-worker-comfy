@@ -208,7 +208,7 @@ def install_models_to_docker_image(snapshot: dict):
     for path, model in models.items():
         file_path = os.path.join(COMFYUI_PATH, 'models', path)
         url = model.get('url')
-        type = model.get('type', 'volume')
+        type = model.get('type', 'native')
         if type != 'native':
             continue
         if not url:
