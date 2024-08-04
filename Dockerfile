@@ -38,7 +38,8 @@ RUN pip3 install -r requirements.txt
 
 # Go back to the root
 WORKDIR /
-RUN pip3 install -r requirements.txt
+ADD requirements.txt /requirements.txt
+RUN pip3 install -r /requirements.txt
 # RUN pip3 install runpod requests boto3 nanoid
 # Install cloudflared
 RUN wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb \
