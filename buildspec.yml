@@ -21,12 +21,13 @@ phases:
   build:
     commands:
       - depot build -t $IMAGE_NAME --push --platform linux/amd64 --build-arg DEPS_JSON="$DEPS_JSON" .
+      - BUILD_STATUS=$?
   post_build:
     commands:
       - echo $WEBHOOK_ENDPOINT
       - BUILD_ID=$(echo $CODEBUILD_BUILD_ID | cut -d':' -f2)
       - |
-        if [ $? -eq 0 ]; then
+        if [ $BUILD_STATUS -eq 0 ]; then
           curl -X POST "$WEBHOOK_ENDPOINT" \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $WEBHOOK_API_KEY" \

@@ -34,7 +34,7 @@ RUN git clone --branch master --single-branch https://github.com/comfyanonymous/
 WORKDIR /comfyui
 
 # Install ComfyUI dependencies
-RUN pip3 install -r requirements.txt \
+RUN pip3 install -r requirements.txt
 
 # Go back to the root
 WORKDIR /

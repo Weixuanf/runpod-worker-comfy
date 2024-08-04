@@ -1,6 +1,51 @@
 {
   "comfyui": "b249862080d4c046bd7f2680898c2f348c792a12",
   "git_custom_nodes": {
+    "https://github.com/ltdrdata/ComfyUI-Impact-Pack": {
+      "hash": "aad58a99bf6dfb2fededea82a011c1e72418bff4"
+    },
+    "https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite": {
+      "hash": "1f46b5c3ae9b4e30f721bee83d9cb7b9f270d8cd"
+    },
+    "https://github.com/ssitu/ComfyUI_UltimateSDUpscale": {
+      "hash": "233f8b8ef999c35d1bdf98741632234977e6719f"
+    },
+    "https://github.com/rgthree/rgthree-comfy": {
+      "hash": "d233e0fa5e8abd181d9180986db93036a719b925"
+    },
+    "https://github.com/cubiq/ComfyUI_IPAdapter_plus": {
+      "hash": "7d8adaec730bff243cc3026eed5111695cc5ed4e"
+    },
+    "https://github.com/Kosinkadink/ComfyUI-AnimateDiff-Evolved": {
+      "hash": "72482e70f73336a3dd61cbf9cc7d973137e9b33d"
+    },
+    "https://github.com/Fannovel16/comfyui_controlnet_aux": {
+      "hash": "589af18adae7ff50009a0e021781dd1aa39c32e3"
+    },
+    "https://github.com/huchenlei/ComfyUI-layerdiffuse": {
+      "hash": "c5f1c0aa45592d2f48764472db3f7d2da622b6f1"
+    },
+    "https://github.com/cubiq/ComfyUI_essentials": {
+      "hash": "4f2f11ca3c6f89e385bae8af739861f495e60540"
+    },
+    "https://github.com/kijai/ComfyUI-SUPIR": {
+      "hash": "bbb2bd7e8f241100c3ff6d8aa49dda512fef0d55"
+    },
+    "https://github.com/kijai/ComfyUI-KJNodes": {
+      "hash": "2fb0ee4934a240ddf75e63bc4f780ac6a61e2ac8"
+    },
+    "https://github.com/Kosinkadink/ComfyUI-Advanced-ControlNet": {
+      "hash": "bf16347fd09ec14f8e6e9d5b5f31bb7561395275"
+    },
+    "https://github.com/pythongosssss/ComfyUI-WD14-Tagger": {
+      "hash": "4f1a857ff1a73ad2b4cbaf1f487e6aeaf802d226"
+    },
+    "https://github.com/WASasquatch/was-node-suite-comfyui": {
+      "hash": "43039ea455fc4a4f99f38048273f72a75a0523c0"
+    },
+    "https://github.com/pythongosssss/ComfyUI-Custom-Scripts": {
+      "hash": "edc5321bfd3d8f77cace0a69b46e129d99b53c3d"
+    },
     "https://github.com/RockOfFire/ComfyUI_Comfyroll_CustomNodes": {
       "hash": "d78b780ae43fcf8c6b7c6505e6ffb4584281ceca"
     },
