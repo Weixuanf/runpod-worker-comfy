@@ -23,12 +23,7 @@ def clear_comfyui_log():
 
 def append_log_thread(log: str):
     print(log)
-    def append_continuously():
-        while True:
-            log = input()
-            append_comfyui_log(log)
-
-    append_thread = threading.Thread(target=append_continuously)
+    append_thread = threading.Thread(target=append_comfyui_log, args=(log,))
     append_thread.daemon = True
     append_thread.start()
 

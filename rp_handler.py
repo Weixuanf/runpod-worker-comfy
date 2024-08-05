@@ -355,7 +355,6 @@ def handler(job):
     try:
         queued_workflow = queue_workflow(prompt)
         prompt_id = queued_workflow["prompt_id"]
-        updateRunJobLogsThread({"id": job["id"], **job_item, "status": "RUNNING", })
         start_tunnel_thread(job_item)
         print(f"runpod-worker-comfy queued workflow with ID {prompt_id}")
     except Exception as e:
