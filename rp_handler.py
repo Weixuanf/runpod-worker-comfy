@@ -14,11 +14,11 @@ from dotenv import load_dotenv
 from app.api_utils import install_models, list_models
 from app.ddb_utils import finishJobWithError, start_tunnel_thread, updateRunJob, updateRunJobLogsThread, updateRunJobLogs
 from app.install_prompt_deps import install_prompt_deps, rename_file_with_hash
-from app.logUtils import start_append_log_thread, start_continuous_s3_log_upload_thread
+from app.logUtils import append_log_thread, start_continuous_s3_log_upload_thread
 from app.s3_utils import upload_file_to_s3
 from concurrent.futures import ThreadPoolExecutor, as_completed
 load_dotenv()
-from app.common import COMFY_API_AVAILABLE_INTERVAL_MS, COMFY_HOST, COMFY_HOST_URL, COMFY_POLLING_INTERVAL_MS, COMFYUI_PATH, COMFYUI_LOG_PATH, COMFYUI_PORT, COMFY_POLLING_MAX_RETRIES, COMFY_API_AVAILABLE_MAX_RETRIES, EXTRA_MODEL_PATH, REFRESH_WORKER, restart_error, set_job_item
+from app.common import COMFY_API_AVAILABLE_INTERVAL_MS, COMFY_HOST, COMFY_HOST_URL, COMFY_POLLING_INTERVAL_MS, COMFYUI_PATH, COMFYUI_LOG_PATH, COMFYUI_PORT, COMFY_POLLING_MAX_RETRIES, COMFY_API_AVAILABLE_MAX_RETRIES, EXTRA_MODEL_PATH, REFRESH_WORKER, get_job_item, restart_error, set_job_item
 import logging
 logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -329,39 +329,25 @@ def handler(job):
     prompt = validated_data["prompt"]
     deps = validated_data.get("deps")
     time_start = time.perf_counter()
-    yield f"🦄Starting installation of prompt dependencies...\n"
     if deps:
         try:
             prompt = install_prompt_deps(prompt, deps, job_item)
         except Exception as e:
             print('❌Error install_prompt_deps:', str(e))
-            updateRunJobLogs({"id": job["id"], 
-                **job_item,
-                "status": "FAIL", 
-                "finishedAt": datetime.datetime.now().isoformat(),
-                "error": f"Error installing prompt dependencies: {str(e)+ traceback.format_exc()}",
-                "duration": time.perf_counter() - time_start,
-            })
             return set_job_item({error: f"Error installing prompt dependencies: {str(e)}"})
     set_job_item({"install_finished_at": datetime.datetime.now().isoformat()})
-    start_append_log_thread('🦄Finished installing, waiting for server...')
-    yield f"🦄Finished installation of prompt dependencies... chekcing server\n"
+    append_log_thread('🦄Finished installing, waiting for server...')
     # Make sure that the ComfyUI API is available
     server_online = check_server(
         f"http://{COMFY_HOST}",
         COMFY_API_AVAILABLE_MAX_RETRIES, # 15sec
         COMFY_API_AVAILABLE_INTERVAL_MS,
     )
-    yield {"server_online": server_online}
     if not server_online:
-        finishJobWithError(job["id"], "ComfyUI API is not available, please try again later.")
+        set_job_item({"status": "FAIL", "finishedAt": datetime.datetime.now().isoformat(), error: "ComfyUI API is not available, please try again later."})
         return {"error": "ComfyUI API is not available, please try again later."}
-    start_append_log_thread('🦄Server is online, starting workflow...')
+    append_log_thread('🦄Server is online, starting workflow...')
     
-    yield json.dumps({
-        "type": 'logging',
-        "message": "Server is online, starting workflow..."
-    })
     # refresh server file lists
     requests.get(f'{COMFY_HOST_URL}/object_info')
 
@@ -382,10 +368,7 @@ def handler(job):
                 "duration": time.perf_counter() - time_start,
             })
         return {"error": f"Error queuing workflow: {str(e)}"}
-    yield json.dumps({
-        "type": 'logging',
-        "message": "⌛️ wait until image generation is complete"
-    })
+
     # Poll for completion
     print(f"⌛️ wait until image generation is complete")
     retries = 0
@@ -394,10 +377,7 @@ def handler(job):
     try:
         while retries < COMFY_POLLING_MAX_RETRIES:
             history = get_history(prompt_id)
-            if retries % 5 == 0:
-                # update log in ddb
-                updateRunJobLogsThread({"id": job["id"], **job_item, "status": "RUNNING"})
-
+            
             # Exit the loop if we have found the history
             if prompt_id in history and history[prompt_id].get("outputs"):
                 print('🎨🖼️ Image generated history[prompt_id]:', history[prompt_id])
@@ -415,17 +395,17 @@ def handler(job):
         error = "error waiting for image generation"
         print('❌Error polling for completion:', str(e))
 
-    updateRunJobLogs({"id": job["id"], 
-        **job_item,
+    set_job_item({
         "status": "FAIL" if error else "SUCCESS", 
         "finishedAt": datetime.datetime.now().isoformat(),
         "output": images_result.get("images", None),
         "error": error,
         "duration": time.perf_counter() - time_start,
     })
+    updateRunJob(get_job_item())
     # disable hash renaming
     # rename_file_with_hash()
-    return {**images_result, "refresh_worker": REFRESH_WORKER}
+    return {**get_job_item(), "refresh_worker": REFRESH_WORKER}
 
 if __name__ == "__main__":
     runpod.serverless.start({"handler": handler})

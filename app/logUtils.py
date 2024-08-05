@@ -21,7 +21,7 @@ def clear_comfyui_log():
     with open(COMFYUI_LOG_PATH, "w") as f:
         f.write("")
 
-def start_append_log_thread(log: str):
+def append_log_thread(log: str):
     print(log)
     def append_continuously():
         while True:
