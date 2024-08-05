@@ -264,7 +264,6 @@ def process_output_images(outputs: Outputs):
 
 def handler(job):
     print(f"🧪🧪handler received job", job['id'])
-    yield f"🧪🧪handler received job {job['id']}"
     job_input = job["input"]
     job_item = job_input.get('jobItem', {})
     job_item = {**job_item, 'id': job['id']}
@@ -330,7 +329,7 @@ def handler(job):
     prompt = validated_data["prompt"]
     deps = validated_data.get("deps")
     time_start = time.perf_counter()
-    yield f"🦄Starting installation of prompt dependencies..."
+    yield f"🦄Starting installation of prompt dependencies...\n"
     if deps:
         try:
             prompt = install_prompt_deps(prompt, deps, job_item)
@@ -346,13 +345,14 @@ def handler(job):
             return set_job_item({error: f"Error installing prompt dependencies: {str(e)}"})
     set_job_item({"install_finished_at": datetime.datetime.now().isoformat()})
     start_append_log_thread('🦄Finished installing, waiting for server...')
-    yield f"🦄Finished installation of prompt dependencies..."
+    yield f"🦄Finished installation of prompt dependencies... chekcing server\n"
     # Make sure that the ComfyUI API is available
     server_online = check_server(
         f"http://{COMFY_HOST}",
         COMFY_API_AVAILABLE_MAX_RETRIES, # 15sec
         COMFY_API_AVAILABLE_INTERVAL_MS,
     )
+    yield {"server_online": server_online}
     if not server_online:
         finishJobWithError(job["id"], "ComfyUI API is not available, please try again later.")
         return {"error": "ComfyUI API is not available, please try again later."}

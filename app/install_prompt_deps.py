@@ -53,7 +53,8 @@ def install_prompt_deps(prompt,deps, new_job):
             model['file_path'] = file_path
             downloaded_model_paths[file_path] = model
             print(f"⬇️Start downloading model from {download_url} to {file_path}")
-            start_subprocess(['wget','-O',file_path, download_url, '--progress=bar:force'])
+            start_subprocess(['wget', '-O', file_path, download_url, '--quiet', '--show-progress'])
+
     install_prompt_images(prompt,deps)
     return prompt
 
