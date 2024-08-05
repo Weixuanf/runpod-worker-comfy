@@ -2,12 +2,20 @@ from nanoid import generate
 import boto3
 import os
 import mimetypes
+from app.common import COMFYUI_LOG_PATH
 
 s3_client = boto3.client(
     's3'
 )
 s3_bucket_name = 'comfyspace'
 aws_region = os.environ.get('AWS_DEFAULT_REGION', '')
+
+def upload_log_to_s3(file_key):
+    with open(COMFYUI_LOG_PATH, "r") as f:
+        log_data = f.read()
+    print(f"📄 Uploading log to S3 {file_key}")
+    s3_client.put_object(Bucket=s3_bucket_name, Key=file_key, Body=log_data)
+    print(f"✅ Uploaded log to S3 {file_key}")
 
 def upload_file_to_s3(image_location):
     file_extension = os.path.splitext(image_location)[1]

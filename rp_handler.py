@@ -14,25 +14,15 @@ from dotenv import load_dotenv
 from app.api_utils import install_models, list_models
 from app.ddb_utils import finishJobWithError, start_tunnel_thread, updateRunJob, updateRunJobLogsThread, updateRunJobLogs
 from app.install_prompt_deps import install_prompt_deps, rename_file_with_hash
-from app.logUtils import clear_comfyui_log
+from app.logUtils import start_append_log_thread, start_continuous_s3_log_upload_thread
 from app.s3_utils import upload_file_to_s3
 from concurrent.futures import ThreadPoolExecutor, as_completed
 load_dotenv()
-from app.common import COMFY_API_AVAILABLE_INTERVAL_MS, COMFY_HOST, COMFY_HOST_URL, COMFY_POLLING_INTERVAL_MS, COMFYUI_PATH, COMFYUI_LOG_PATH, COMFYUI_PORT, COMFY_POLLING_MAX_RETRIES, COMFY_API_AVAILABLE_MAX_RETRIES, EXTRA_MODEL_PATH, REFRESH_WORKER, restart_error
+from app.common import COMFY_API_AVAILABLE_INTERVAL_MS, COMFY_HOST, COMFY_HOST_URL, COMFY_POLLING_INTERVAL_MS, COMFYUI_PATH, COMFYUI_LOG_PATH, COMFYUI_PORT, COMFY_POLLING_MAX_RETRIES, COMFY_API_AVAILABLE_MAX_RETRIES, EXTRA_MODEL_PATH, REFRESH_WORKER, restart_error, set_job_item
 import logging
 logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def validate_input(job_input):
-    """
-    Validates the input for the handler function.
-
-    Args:
-        job_input (dict): The input data to validate.
-
-    Returns:
-        tuple: A tuple containing the validated data and an error message, if any.
-               The structure is (validated_data, error_message).
-    """
     # Validate if job_input is provided
     if job_input is None:
         return None, "Please provide input"
@@ -56,14 +46,9 @@ def validate_input(job_input):
 def check_server(url, retries=50, delay=500):
     """
     Check if a server is reachable via HTTP GET request
-
-    Args:
     - url (str): The URL to check
     - retries (int, optional): The number of times to attempt connecting to the server. Default is 50
     - delay (int, optional): The time in milliseconds to wait between retries. Default is 500
-
-    Returns:
-    bool: True if the server is reachable within the given number of retries, otherwise False
     """
 
     for i in range(retries):
@@ -279,6 +264,7 @@ def process_output_images(outputs: Outputs):
 
 def handler(job):
     print(f"🧪🧪handler received job", job['id'])
+    yield f"🧪🧪handler received job {job['id']}"
     job_input = job["input"]
     job_item = job_input.get('jobItem', {})
     job_item = {**job_item, 'id': job['id']}
@@ -333,6 +319,8 @@ def handler(job):
             return {'session': 'finished'}
         return {'error': 'Error local tunneling comfyui'}
 
+    set_job_item({**job_item, "startedAt": datetime.datetime.now().isoformat()})
+    start_continuous_s3_log_upload_thread()
     # Make sure that the input is valid
     validated_data, error_message = validate_input(job_input)
     if error_message:
@@ -342,8 +330,7 @@ def handler(job):
     prompt = validated_data["prompt"]
     deps = validated_data.get("deps")
     time_start = time.perf_counter()
-    job_item = {**job_item, "startedAt": datetime.datetime.now().isoformat()}
-    clear_comfyui_log()
+    yield f"🦄Starting installation of prompt dependencies..."
     if deps:
         try:
             prompt = install_prompt_deps(prompt, deps, job_item)
@@ -356,9 +343,10 @@ def handler(job):
                 "error": f"Error installing prompt dependencies: {str(e)+ traceback.format_exc()}",
                 "duration": time.perf_counter() - time_start,
             })
-            return {"error": f"Error installing prompt dependencies: {str(e)}"}
-    job_item = {**job_item, "installFinishedAt": datetime.datetime.now().isoformat()}
-    updateRunJobLogsThread({**job_item })
+            return set_job_item({error: f"Error installing prompt dependencies: {str(e)}"})
+    set_job_item({"install_finished_at": datetime.datetime.now().isoformat()})
+    start_append_log_thread('🦄Finished installing, waiting for server...')
+    yield f"🦄Finished installation of prompt dependencies..."
     # Make sure that the ComfyUI API is available
     server_online = check_server(
         f"http://{COMFY_HOST}",
@@ -368,6 +356,12 @@ def handler(job):
     if not server_online:
         finishJobWithError(job["id"], "ComfyUI API is not available, please try again later.")
         return {"error": "ComfyUI API is not available, please try again later."}
+    start_append_log_thread('🦄Server is online, starting workflow...')
+    
+    yield json.dumps({
+        "type": 'logging',
+        "message": "Server is online, starting workflow..."
+    })
     # refresh server file lists
     requests.get(f'{COMFY_HOST_URL}/object_info')
 
@@ -388,7 +382,10 @@ def handler(job):
                 "duration": time.perf_counter() - time_start,
             })
         return {"error": f"Error queuing workflow: {str(e)}"}
-
+    yield json.dumps({
+        "type": 'logging',
+        "message": "⌛️ wait until image generation is complete"
+    })
     # Poll for completion
     print(f"⌛️ wait until image generation is complete")
     retries = 0

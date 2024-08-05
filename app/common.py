@@ -30,5 +30,18 @@ REFRESH_WORKER = os.environ.get("REFRESH_WORKER", "false").lower() == "true"
 IS_SCANNER_WORKER = os.environ.get('IS_SCANNER_WORKER', False)
 restart_error = ""
 
-# global job for job update db
-job = None
+
+# Global variable to store job item
+job_item = {}
+
+def set_job_item(change):
+    global job_item
+    job_item = {
+        **job_item,
+        **change
+    }
+    return job_item
+
+def get_job_item():
+    global job_item
+    return job_item
