@@ -17,6 +17,8 @@ from app.install_prompt_deps import install_prompt_deps, rename_file_with_hash
 from app.logUtils import append_comfyui_log, append_log_thread, start_continuous_s3_log_upload_thread
 from app.s3_utils import upload_file_to_s3
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
+from app.ws_client import WebSocketClient
 load_dotenv()
 from app.common import COMFY_API_AVAILABLE_INTERVAL_MS, COMFY_HOST, COMFY_HOST_URL, COMFY_POLLING_INTERVAL_MS, COMFYUI_PATH, COMFYUI_LOG_PATH, COMFYUI_PORT, COMFY_POLLING_MAX_RETRIES, COMFY_API_AVAILABLE_MAX_RETRIES, EXTRA_MODEL_PATH, REFRESH_WORKER, get_job_item, restart_error, set_job_item
 import logging
@@ -262,7 +264,7 @@ def process_output_images(outputs: Outputs):
         "images": results
     }
 
-def handler(job):
+async def handler(job):
     print(f"🧪🧪handler received job", job['id'])
     job_input = job["input"]
     job_item = job_input.get('jobItem', {})
@@ -375,6 +377,62 @@ def handler(job):
     retries = 0
     error = None
     images_result = {}
+    client = WebSocketClient(api_host=COMFY_HOST, api_base="/ws")
+    append_log_thread('🦄 created ws')
+    await client.create_socket()
+
+    while True:
+        message = await client.receive_message()
+        print(f"🦄 message: {message}")
+        if message is None:
+            break
+        
+        try:
+            if isinstance(message, bytes):
+                view = memoryview(message)
+                event_type = int.from_bytes(view[:4], byteorder='big')
+                buffer = message[4:]
+
+                if event_type == 1:
+                    image_type = int.from_bytes(buffer[:4], byteorder='big')
+                    image_mime = "image/jpeg" if image_type == 1 else "image/png"
+                    image_blob = buffer[4:]
+                    # Process the image_blob as needed
+                    print(f"Received image of type {image_mime}")
+                else:
+                    print(f"Unknown binary websocket message of type {event_type}")
+
+            else:
+                msg = json.loads(message)
+                msg_type = msg['type']
+                append_log_thread(f'🦄 msg type {msg_type}')
+                if msg_type == "status":
+                    if 'sid' in msg['data']:
+                        client.client_id = msg['data']['sid']
+                        globals()['clientId'] = client.client_id  # use a global variable to mimic window.name
+                        print(f"Client ID: {client.client_id}")
+                    print(f"Status: {msg['data']['status']}")
+                elif msg_type == "progress":
+                    print(f"Progress: {msg['data']}")
+                elif msg_type == "executing":
+                    print(f"Executing: {msg['data']['node']}")
+                elif msg_type == "executed":
+                    print(f"Executed: {msg['data']}")
+                elif msg_type == "execution_start":
+                    print(f"Execution start: {msg['data']}")
+                elif msg_type == "execution_success":
+                    print(f"Execution success: {msg['data']}")
+                elif msg_type == "execution_error":
+                    print(f"Execution error: {msg['data']}")
+                    break
+                elif msg_type == "done":
+                    print(f"Execution done: {msg['data']}")
+                    break
+                else:
+                    print(f"Unknown message type: {msg_type}")
+        except Exception as e:
+            print(f"Unhandled message: {message}, error: {e}")
+
     try:
         while retries < COMFY_POLLING_MAX_RETRIES:
             history = get_history(prompt_id)
