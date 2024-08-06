@@ -389,6 +389,7 @@ async def handler(job):
         
         try:
             if isinstance(message, bytes):
+                print(f"Received binary websocket message of length {len(message)}")
                 view = memoryview(message)
                 event_type = int.from_bytes(view[:4], byteorder='big')
                 buffer = message[4:]
@@ -419,10 +420,12 @@ async def handler(job):
                     print(f"Executing: {msg['data']['node']}")
                 elif msg_type == "executed":
                     print(f"Executed: {msg['data']}")
+                    break
                 elif msg_type == "execution_start":
                     print(f"Execution start: {msg['data']}")
                 elif msg_type == "execution_success":
                     print(f"Execution success: {msg['data']}")
+                    break
                 elif msg_type == "execution_error":
                     print(f"Execution error: {msg['data']}")
                     break
