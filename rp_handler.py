@@ -408,9 +408,10 @@ async def handler(job):
                 append_log_thread(f'🦄 msg type {msg_type}')
                 if msg_type == "status":
                     if 'sid' in msg['data']:
-                        client.client_id = msg['data']['sid']
-                        globals()['clientId'] = client.client_id  # use a global variable to mimic window.name
-                        print(f"Client ID: {client.client_id}")
+                        print(f"Client ID: {msg['data']['sid']}")
+                        # 'client.client_id = msg['data']['sid']
+                        # globals()['clientId'] = client.client_id  # use a global variable to mimic window.name
+                        # print(f"Client ID: {client.client_id}")'
                     print(f"Status: {msg['data']['status']}")
                 elif msg_type == "progress":
                     print(f"Progress: {msg['data']}")

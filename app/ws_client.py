@@ -13,11 +13,8 @@ class WebSocketClient:
         if self.socket:
             return
 
-        existing_session = None
-        if 'clientId' in globals():
-            existing_session = f"?clientId={globals()['clientId']}"
-
-        uri = f"ws{'s' if 'https:' in globals()['protocol'] else ''}://{self.api_host}{self.api_base}/ws{existing_session if existing_session else ''}"
+        existing_session = f"?clientId={self.client_id}" if self.client_id else ""
+        uri = f"ws://{self.api_host}{self.api_base}{existing_session}"
         self.socket = await websockets.connect(uri)
 
     async def receive_message(self):
