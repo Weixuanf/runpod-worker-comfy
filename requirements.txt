@@ -1,5 +1,6 @@
 runpod
 nanoid
+websockets
 boto3
 requests
 #ComfyUI-Manager requirements

@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 from app.api_utils import install_models, list_models
 from app.ddb_utils import finishJobWithError, start_tunnel_thread, updateRunJob, updateRunJobLogsThread, updateRunJobLogs
 from app.install_prompt_deps import install_prompt_deps, rename_file_with_hash
-from app.logUtils import append_log_thread, start_continuous_s3_log_upload_thread
+from app.logUtils import append_comfyui_log, append_log_thread, start_continuous_s3_log_upload_thread
 from app.s3_utils import upload_file_to_s3
 from concurrent.futures import ThreadPoolExecutor, as_completed
 load_dotenv()
@@ -333,8 +333,10 @@ def handler(job):
         try:
             prompt = install_prompt_deps(prompt, deps, job_item)
         except Exception as e:
-            print('❌Error install_prompt_deps:', str(e))
-            return set_job_item({error: f"Error installing prompt dependencies: {str(e)}"})
+            append_comfyui_log('❌Error install_prompt_deps:', str(e))
+            set_job_item({"status": "FAIL", "finishedAt": datetime.datetime.now().isoformat()})
+            updateRunJobLogs(get_job_item())
+            return {"error": f"Error installing prompt dependencies: {str(e)}"}
     set_job_item({"install_finished_at": datetime.datetime.now().isoformat()})
     append_log_thread('🦄Finished installing, waiting for server...')
     # Make sure that the ComfyUI API is available
