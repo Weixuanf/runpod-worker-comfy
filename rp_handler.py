@@ -1,4 +1,5 @@
 import subprocess
+import threading
 import traceback
 import runpod
 import datetime
@@ -15,7 +16,7 @@ from app.api_utils import install_models, list_models
 from app.comfy_subprocess import start_comfyui_subprocess
 from app.ddb_utils import finishJobWithError, start_tunnel_thread, updateRunJob, updateRunJobLogsThread, updateRunJobLogs
 from app.install_prompt_deps import install_prompt_deps, rename_file_with_hash
-from app.logUtils import append_comfyui_log, append_log_thread, start_continuous_s3_log_upload_thread
+from app.logUtils import append_comfyui_log, append_log_thread, start_continuous_s3_log_upload_thread, stream_subprocess_output
 from app.s3_utils import upload_file_to_s3
 from concurrent.futures import ThreadPoolExecutor, as_completed
 load_dotenv()
@@ -319,10 +320,12 @@ def handler(job):
             return {'error': 'Error local tunneling ComfyUI'}
         
         # Start JupyterLab as a subprocess
-        p_jupyter = subprocess.Popen(["jupyter", "lab", "--port", str(JUPYTER_PORT), "--no-browser", "--allow-root"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p_jupyter = subprocess.Popen(["jupyter", "lab", "--ip=0.0.0.0", "--port", str(JUPYTER_PORT), "--no-browser", "--allow-root"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         
         # Start cloudflared tunnel for JupyterLab
         p_jupyter_tunnel = subprocess.Popen(["cloudflared", "tunnel", "--url", f"http://127.0.0.1:{JUPYTER_PORT}"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        # Start a thread to stream the JupyterLab logs to the main console
+        threading.Thread(target=stream_subprocess_output, args=(p_jupyter,)).start()
         jupyter_tunnel_url = None
         for line in p_jupyter_tunnel.stderr:
             l = line.decode()

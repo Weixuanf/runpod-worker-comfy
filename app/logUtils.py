@@ -61,6 +61,11 @@ def stream_output(process, stream_type, logError=False):
             append_comfyui_log(line.strip())
         count = count + 1
 
+def stream_subprocess_output(process):
+    for line in process.stdout:
+        print(line.decode(), end='')
+    for line in process.stderr:
+        print(line.decode(), end='')
 
 def start_subprocess(cmd):
     # Start the subprocess and redirect its output and error
