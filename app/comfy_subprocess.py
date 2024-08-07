@@ -50,7 +50,7 @@ def start_comfyui_subprocess():
     file_handler.setLevel(logging.DEBUG)
 
     # Create formatters and add them to handlers
-    formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
+    formatter = logging.Formatter('%(asctime)s %(message)s')
     # console_handler.setFormatter(formatter)
     file_handler.setFormatter(formatter)
 
