@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-echo "Symlinking files from Network Volume"
-rm -rf /workspace && \
-  ln -s /runpod-volume /workspace
+# echo "Symlinking files from Network Volume"
+# rm -rf /workspace && \
+#   ln -s /runpod-volume /workspace
 
 comfyui_path="/comfyui"
 comfy_log_path="/comfyui.log"
