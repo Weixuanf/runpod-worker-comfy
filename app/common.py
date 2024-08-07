@@ -4,6 +4,7 @@ import threading
 
 CONTAINER_ROOT = os.path.dirname(os.path.dirname(__file__))
 COMFYUI_PATH = os.environ.get("COMFYUI_PATH", "/comfyui")  
+JUPYTER_PORT = os.environ.get("JUPYTER_PORT", "8888")
 COMFYUI_LOG_PATH = '/comfyui.log'
 print(f'👉COMFYUI_PATH: {COMFYUI_PATH}')
 COMFYUI_PORT = "8080"

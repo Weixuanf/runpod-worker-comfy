@@ -65,7 +65,8 @@ ADD start.sh rp_handler.py test_input.json ./
 ADD extra_model_paths.yaml /comfyui/
 ADD app/ /app/
 
-EXPOSE 8080
+# Expose port 8888 for JupyterLab
+EXPOSE 8080 8888  
 
 RUN chmod +x /start.sh
 

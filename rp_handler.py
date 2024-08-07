@@ -19,7 +19,7 @@ from app.logUtils import append_comfyui_log, append_log_thread, start_continuous
 from app.s3_utils import upload_file_to_s3
 from concurrent.futures import ThreadPoolExecutor, as_completed
 load_dotenv()
-from app.common import COMFY_API_AVAILABLE_INTERVAL_MS, COMFY_HOST, COMFY_HOST_URL, COMFY_POLLING_INTERVAL_MS, COMFYUI_PATH, COMFYUI_LOG_PATH, COMFYUI_PORT, COMFY_POLLING_MAX_RETRIES, COMFY_API_AVAILABLE_MAX_RETRIES, EXTRA_MODEL_PATH, REFRESH_WORKER, get_job_item, restart_error, set_job_item
+from app.common import COMFY_API_AVAILABLE_INTERVAL_MS, COMFY_HOST, COMFY_HOST_URL, COMFY_POLLING_INTERVAL_MS, COMFYUI_PATH, COMFYUI_LOG_PATH, COMFYUI_PORT, COMFY_POLLING_MAX_RETRIES, COMFY_API_AVAILABLE_MAX_RETRIES, EXTRA_MODEL_PATH, JUPYTER_PORT, REFRESH_WORKER, get_job_item, restart_error, set_job_item
 import logging
 logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -307,17 +307,35 @@ def handler(job):
         if not server_online:
             return {"error": "ComfyUI API is not available, please try again later."}
         p = subprocess.Popen(["cloudflared", "tunnel", "--url", f"http://127.0.0.1:{COMFYUI_PORT}"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        tunnel_url = None
+        comfyui_tunnel_url = None
         for line in p.stderr:
             l = line.decode()
             if "trycloudflare.com " in l:
                 print("👉This is the URL to access ComfyUI:", l[l.find("http"):], end='')
-                tunnel_url = True
+                comfyui_tunnel_url = True
                 break
-        if tunnel_url:
-            while True:
-                time.sleep(60)
-        return {'error': 'Error local tunneling comfyui'}
+
+        if not comfyui_tunnel_url:
+            return {'error': 'Error local tunneling ComfyUI'}
+        
+        # Start JupyterLab as a subprocess
+        p_jupyter = subprocess.Popen(["jupyter", "lab", "--port", str(JUPYTER_PORT), "--no-browser", "--allow-root"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        
+        # Start cloudflared tunnel for JupyterLab
+        p_jupyter_tunnel = subprocess.Popen(["cloudflared", "tunnel", "--url", f"http://127.0.0.1:{JUPYTER_PORT}"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        jupyter_tunnel_url = None
+        for line in p_jupyter_tunnel.stderr:
+            l = line.decode()
+            if "trycloudflare.com " in l:
+                print("👉 This is the URL to access JupyterLab:", l[l.find("http"):], end='')
+                jupyter_tunnel_url = True
+                break
+        
+        if not jupyter_tunnel_url:
+            return {'error': 'Error local tunneling JupyterLab'}
+                
+        while True:
+            time.sleep(60)
 
     set_job_item({**job_item, "startedAt": datetime.datetime.now().isoformat()})
     start_continuous_s3_log_upload_thread()
