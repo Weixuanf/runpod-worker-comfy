@@ -313,9 +313,8 @@ def handler(job):
                 tunnel_url = True
                 break
         if tunnel_url:
-            # Sleep for 3600 seconds
-            time.sleep(8000)
-            return {'session': 'finished'}
+            while True:
+                time.sleep(60)
         return {'error': 'Error local tunneling comfyui'}
 
     set_job_item({**job_item, "startedAt": datetime.datetime.now().isoformat()})

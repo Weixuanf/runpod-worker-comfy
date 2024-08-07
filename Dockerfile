@@ -52,7 +52,7 @@ ENV DEPS_JSON=${DEPS_JSON}
 ADD scripts/manager_copy.py scripts/install_custom_nodes_BASIC.py scripts/deps.json ./scripts/
 
 ADD scripts/put_files_in_models_folder.py ./scripts/
-RUN python3 /scripts/put_files_in_models_folder.py
+# RUN python3 /scripts/put_files_in_models_folder.py
 
 RUN python3 /scripts/install_custom_nodes_BASIC.py
 
