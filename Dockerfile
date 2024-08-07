@@ -21,6 +21,7 @@ RUN apt-get update && apt-get install -y \
 # Clean up to reduce image size
 RUN apt-get autoremove -y && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 RUN pip3 install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+
 # RUN  pip install --no-cache-dir xformers --no-deps
 # RUN  pip install insightface
 
@@ -44,6 +45,9 @@ RUN pip3 install -r /requirements.txt
 # Install cloudflared
 RUN wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb \
     && dpkg -i cloudflared-linux-amd64.deb
+
+# Install JupyterLab for debugging
+RUN pip3 install --no-cache-dir jupyterlab
 
 # Set the DEPS_JSON environment variable to pass comfyui snapshot
 ARG DEPS_JSON

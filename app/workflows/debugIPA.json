@@ -1,0 +1,26 @@
+{
+  "comfyui": "449bf52923896236ed645da2ff05aadbf2b0d536",
+  "models": {
+    "vae/vae-ft-mse-840000-ema-pruned.safetensors": {
+      "url": "https://huggingface.co/stabilityai/sd-vae-ft-mse-original/resolve/main/vae-ft-mse-840000-ema-pruned.safetensors"
+    },
+    "checkpoints/dreamshaper_8.safetensors": {
+      "url": "https://huggingface.co/digiplay/DreamShaper_8/resolve/main/dreamshaper_8.safetensors"
+    },
+    "ipadapter/ip-adapter_sd15_vit-G.safetensors": {
+      "url": "https://huggingface.co/h94/IP-Adapter/resolve/main/models/ip-adapter_sd15_vit-G.safetensors"
+    },
+    "ipadapter/ip-adapter_sd15.safetensors": {
+      "url": "https://huggingface.co/h94/IP-Adapter/resolve/main/models/ip-adapter_sd15.safetensors"
+    },
+    "ip-adapter-plus_sd15.safetensors": {
+      "url": "https://huggingface.co/h94/IP-Adapter/resolve/main/models/ip-adapter-plus_sd15.safetensors"
+    }
+  },
+  "git_custom_nodes": {
+    "https://github.com/cubiq/ComfyUI_IPAdapter_plus": {
+      "hash": "df8c78b6bfe8450bdeed1209dfb3f94c9c59773a",
+      "disabled": false
+    }
+  }
+}
