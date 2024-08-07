@@ -1,32 +1,23 @@
 import subprocess
-import signal
-import threading
-from app.common import COMFYUI_LOG_PATH, COMFYUI_PORT, restart_error, COMFYUI_PATH
-import os 
-
-# Global variable to track the subprocess status
-is_subprocess_running = False
-# Subprocess handle
-subprocess_handle = None
-
-def stream_output(process, stream_type, logError=False):
-    """
-    Forward the output of the subprocess to the console.
-    
-    :param process: The subprocess handle
-    :param stream_type: Type of the stream ('stdout' or 'stderr')
-    """
-    global restart_error
-    stream = process.stdout if stream_type == 'stdout' else process.stderr
-    for line in iter(stream.readline, ''):
-        print(line.strip())
-        if stream_type == 'stderr':
-            # Append errors to the global string, separating them with a newline character
-            restart_error += line.strip() + "\n"
-
-import subprocess
 import logging
 import sys
+import threading
+
+COMFYUI_LOG_PATH = '/comfyui.log'
+COMFYUI_PORT = '8080'
+
+# Flag to indicate if the subprocess is running
+is_subprocess_running = False
+subprocess_handle = None
+
+def stream_subprocess_output(process, logger):
+    """Function to stream subprocess output."""
+    for line in iter(process.stdout.readline, b''):
+        logger.info(line.decode().strip())
+    for line in iter(process.stderr.readline, b''):
+        logger.error(line.decode().strip())
+    process.stdout.close()
+    process.stderr.close()
 
 def start_comfyui_subprocess():
     print('🚀 Starting ComfyUI subprocess...')
@@ -36,9 +27,6 @@ def start_comfyui_subprocess():
     if is_subprocess_running:
         print("Subprocess is already running.")
         return
-
-    # Define the environment variables for the subprocess
-    # env_vars = {}
 
     # Set up logging
     logger = logging.getLogger('ComfyUI')
@@ -67,38 +55,9 @@ def start_comfyui_subprocess():
     # Start the subprocess
     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-    # Stream the logs
-    for line in iter(process.stdout.readline, b''):
-        logger.info(line.decode().strip())
-    for line in iter(process.stderr.readline, b''):
-        logger.error(line.decode().strip())
+    # Mark the subprocess as running
+    is_subprocess_running = True
+    subprocess_handle = process
 
-    # Wait for the process to complete
-    process.stdout.close()
-    process.stderr.close()
-    process.wait()
-
-
-def stop_comfyui_subprocess():
-    global is_subprocess_running
-    global subprocess_handle
-    
-    if subprocess_handle:
-        try:
-            # Terminate the subprocess
-            subprocess_handle.terminate()
-            # Wait for the subprocess to terminate
-            subprocess_handle.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            # Force kill if not terminated within timeout
-            os.kill(subprocess_handle.pid, signal.SIGKILL)
-        finally:
-            subprocess_handle = None
-            is_subprocess_running = False
-            print("Subprocess stopped.")
-
-def restart():
-    print("Restarting the subprocess...")
-    stop_comfyui_subprocess()
-    start_comfyui_subprocess()
-
+    # Start a thread to stream the subprocess output
+    threading.Thread(target=stream_subprocess_output, args=(process, logger), daemon=True).start()
