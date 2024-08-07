@@ -2,6 +2,7 @@ import subprocess
 import logging
 import sys
 import threading
+import time
 
 COMFYUI_LOG_PATH = '/comfyui.log'
 COMFYUI_PORT = '8080'
@@ -12,12 +13,20 @@ subprocess_handle = None
 
 def stream_subprocess_output(process, logger):
     """Function to stream subprocess output."""
-    for line in iter(process.stdout.readline, b''):
-        logger.info(line.decode().strip())
-    for line in iter(process.stderr.readline, b''):
-        logger.error(line.decode().strip())
-    process.stdout.close()
-    process.stderr.close()
+    def stream_pipe(pipe, log_level):
+        with pipe:
+            for line in iter(pipe.readline, ''):
+                if line:
+                    logger.log(log_level, line.strip())
+
+    stdout_thread = threading.Thread(target=stream_pipe, args=(process.stdout, logging.INFO))
+    stderr_thread = threading.Thread(target=stream_pipe, args=(process.stderr, logging.ERROR))
+
+    stdout_thread.start()
+    stderr_thread.start()
+
+    stdout_thread.join()
+    stderr_thread.join()
 
 def start_comfyui_subprocess():
     print('🚀 Starting ComfyUI subprocess...')
@@ -41,8 +50,8 @@ def start_comfyui_subprocess():
     file_handler.setLevel(logging.DEBUG)
 
     # Create formatters and add them to handlers
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    console_handler.setFormatter(formatter)
+    formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
+    # console_handler.setFormatter(formatter)
     file_handler.setFormatter(formatter)
 
     # Add handlers to the logger
@@ -50,10 +59,10 @@ def start_comfyui_subprocess():
     logger.addHandler(file_handler)
 
     # Command to run
-    command = ['python3', 'main.py', '--port', COMFYUI_PORT]
+    command = ['python3', '-u', 'main.py', '--port', COMFYUI_PORT]
 
     # Start the subprocess
-    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
 
     # Mark the subprocess as running
     is_subprocess_running = True
@@ -61,3 +70,4 @@ def start_comfyui_subprocess():
 
     # Start a thread to stream the subprocess output
     threading.Thread(target=stream_subprocess_output, args=(process, logger), daemon=True).start()
+
