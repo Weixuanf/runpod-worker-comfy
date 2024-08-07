@@ -1,0 +1,21 @@
+{
+  "comfyui": "a178e25912b01abf436eba1cfaab316ba02d272d",
+  "models": {
+    "vae/ae.safetensors": {
+      "url": "https://huggingface.co/black-forest-labs/FLUX.1-schnell/resolve/main/ae.safetensors"
+    },
+    "checkpoints/cardosAnime_v20.safetensors": {
+      "url": "https://huggingface.co/ckpt/cardos-anime/resolve/main/cardosAnime_v20.safetensors"
+    },
+    "unet/flux1-schnell.safetensors": {
+      "url": "https://huggingface.co/black-forest-labs/FLUX.1-schnell/resolve/main/flux1-schnell.safetensors"
+    },
+    "clip/clip_l.safetensors": {
+      "url": "https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/clip_l.safetensors"
+    },
+    "clip/t5xxl_fp16.safetensors": {
+      "url": "https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/t5xxl_fp16.safetensors"
+    }
+  },
+  "git_custom_nodes": {}
+}

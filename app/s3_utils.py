@@ -16,6 +16,7 @@ def upload_log_to_s3(file_key):
         raise Exception(f"Log file {COMFYUI_LOG_PATH} not found")
     if not file_key or file_key == "":
         raise Exception("File key is required to upload log")
+    print(f"📄 Uploading log to S3 {file_key}")
     with open(COMFYUI_LOG_PATH, "r") as f:
         log_data = f.read()
     s3_client.put_object(Bucket=s3_bucket_name, Key=file_key, Body=log_data)
