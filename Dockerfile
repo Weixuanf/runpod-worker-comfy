@@ -28,7 +28,7 @@ RUN  pip install insightface
 # RUN git clone --branch master --single-branch --depth 1 https://github.com/comfyanonymous/ComfyUI /comfyui
 RUN git clone --branch master --single-branch https://github.com/comfyanonymous/ComfyUI /comfyui
 
-# RUN git clone --branch main --single-branch --depth 1 https://github.com/ltdrdata/ComfyUI-Manager /comfyui/custom_nodes/ComfyUI-Manager
+RUN git clone --branch main --single-branch --depth 1 https://github.com/ltdrdata/ComfyUI-Manager /comfyui/custom_nodes/ComfyUI-Manager
 
 # Change working directory to ComfyUI
 WORKDIR /comfyui
