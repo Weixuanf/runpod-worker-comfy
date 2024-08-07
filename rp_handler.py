@@ -313,8 +313,8 @@ def handler(job):
                 tunnel_url = True
                 break
         if tunnel_url:
-            # Sleep for 600 seconds
-            time.sleep(1200)
+            # Sleep for 3600 seconds
+            time.sleep(8000)
             return {'session': 'finished'}
         return {'error': 'Error local tunneling comfyui'}
 
