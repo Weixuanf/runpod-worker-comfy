@@ -10,7 +10,7 @@ s3_client = boto3.client(
 s3_bucket_name = 'comfyspace'
 aws_region = os.environ.get('AWS_DEFAULT_REGION', '')
 
-last_log_time = 0
+
 def upload_log_to_s3(file_key):
     if not os.path.exists(COMFYUI_LOG_PATH):
         raise Exception(f"Log file {COMFYUI_LOG_PATH} not found")
@@ -20,9 +20,8 @@ def upload_log_to_s3(file_key):
     with open(COMFYUI_LOG_PATH, "r") as f:
         log_data = f.read()
     s3_client.put_object(Bucket=s3_bucket_name, Key=file_key, Body=log_data)
-    last_log_time = last_log_time + 1
-    if last_log_time % 5 == 0:
-        print(f"✅ Uploaded log to S3 {file_key}")
+
+    print(f"✅ Uploaded log to S3 {file_key}")
 
 def upload_file_to_s3(image_location):
     file_extension = os.path.splitext(image_location)[1]
