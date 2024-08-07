@@ -13,19 +13,12 @@ export LD_PRELOAD="${TCMALLOC}"
 export PYTHONUNBUFFERED=true
 cd $comfyui_path
 
-if [ "$DISABLE_RUNPOD_HANDLER" = "true" ]; then
-    echo "DISABLE_RUNPOD_HANDLER is set to true. Running ComfyUI directly and streaming logs to console."
-    exec python3 main.py --port 8080
+
+# Serve the API and don't shutdown the container
+if [ "$SERVE_API_LOCALLY" == "true" ]; then
+    python3 -u /rp_handler.py --rp_serve_api
 else
-    python3 main.py --port 8080 >> "${comfy_log_path}" 2>&1 &
-
-    echo "Starting RunPod Handler"
-    # Serve the API and don't shutdown the container
-    if [ "$SERVE_API_LOCALLY" == "true" ]; then
-        python3 -u /rp_handler.py --rp_serve_api
-    else
-        python3 -u /rp_handler.py
-    fi
-
-    touch "$comfy_log_path"
+    python3 -u /rp_handler.py
 fi
+
+touch "$comfy_log_path"

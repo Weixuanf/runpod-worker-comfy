@@ -1,7 +1,7 @@
 import subprocess
 import signal
 import threading
-from app.common import COMFYUI_PORT, restart_error, COMFYUI_PATH
+from app.common import COMFYUI_LOG_PATH, COMFYUI_PORT, restart_error, COMFYUI_PATH
 import os 
 
 # Global variable to track the subprocess status
@@ -24,7 +24,12 @@ def stream_output(process, stream_type, logError=False):
             # Append errors to the global string, separating them with a newline character
             restart_error += line.strip() + "\n"
 
+import subprocess
+import logging
+import sys
+
 def start_comfyui_subprocess():
+    print('🚀 Starting ComfyUI subprocess...')
     global is_subprocess_running
     global subprocess_handle
     
@@ -34,28 +39,45 @@ def start_comfyui_subprocess():
 
     # Define the environment variables for the subprocess
     # env_vars = {}
-    # Set a specific environment variable for the subprocess
-    # env_vars["LD_PRELOAD"] = "path_to_libtcmalloc.so"  # Update this path as necessary
 
-    # Start the subprocess and redirect its output and error
-    venv_path = f"{COMFYUI_PATH}/venv/bin/python3"
-    print("👉💼venv path", venv_path, 'exists', os.path.exists(venv_path), "comfyui main.py exists:",os.path.exists(f"{COMFYUI_PATH}/main.py"))
-    subprocess_handle = subprocess.Popen(
-        [venv_path if os.path.exists(venv_path) else "python3", "-u", f"{COMFYUI_PATH}/main.py", "--disable-auto-launch", "--disable-metadata", "--port", COMFYUI_PORT],
-        # env=env_vars,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        bufsize=1,
-        universal_newlines=True,
-        text=True
-    )
-    is_subprocess_running = True
+    # Set up logging
+    logger = logging.getLogger('ComfyUI')
+    logger.setLevel(logging.DEBUG)
 
-    # Start threads to read the subprocess's output and error streams
-    stdout_thread = threading.Thread(target=stream_output, args=(subprocess_handle, 'stdout'))
-    stderr_thread = threading.Thread(target=stream_output, args=(subprocess_handle, 'stderr'))
-    stdout_thread.start()
-    stderr_thread.start()
+    # Create handlers
+    console_handler = logging.StreamHandler(sys.stdout)
+    file_handler = logging.FileHandler(COMFYUI_LOG_PATH)
+
+    # Set levels
+    console_handler.setLevel(logging.DEBUG)
+    file_handler.setLevel(logging.DEBUG)
+
+    # Create formatters and add them to handlers
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    console_handler.setFormatter(formatter)
+    file_handler.setFormatter(formatter)
+
+    # Add handlers to the logger
+    logger.addHandler(console_handler)
+    logger.addHandler(file_handler)
+
+    # Command to run
+    command = ['python3', 'main.py', '--port', COMFYUI_PORT]
+
+    # Start the subprocess
+    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    # Stream the logs
+    for line in iter(process.stdout.readline, b''):
+        logger.info(line.decode().strip())
+    for line in iter(process.stderr.readline, b''):
+        logger.error(line.decode().strip())
+
+    # Wait for the process to complete
+    process.stdout.close()
+    process.stderr.close()
+    process.wait()
+
 
 def stop_comfyui_subprocess():
     global is_subprocess_running
@@ -79,20 +101,4 @@ def restart():
     print("Restarting the subprocess...")
     stop_comfyui_subprocess()
     start_comfyui_subprocess()
-
-def start_aiohttp_server_subprocess():
-    aiohttp_server_subprocess_handle = subprocess.Popen(
-        ["python3", "-u", "app/server.py"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        bufsize=1,
-        universal_newlines=True,
-        text=True
-    )
-
-    # Start threads to read the aiohttp server subprocess's output and error streams
-    stdout_thread = threading.Thread(target=stream_output, args=(aiohttp_server_subprocess_handle, 'stdout'))
-    stderr_thread = threading.Thread(target=stream_output, args=(aiohttp_server_subprocess_handle, 'stderr'))
-    stdout_thread.start()
-    stderr_thread.start()
 

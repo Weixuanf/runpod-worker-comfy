@@ -12,6 +12,7 @@ import base64
 from io import BytesIO
 from dotenv import load_dotenv
 from app.api_utils import install_models, list_models
+from app.comfy_subprocess import start_comfyui_subprocess
 from app.ddb_utils import finishJobWithError, start_tunnel_thread, updateRunJob, updateRunJobLogsThread, updateRunJobLogs
 from app.install_prompt_deps import install_prompt_deps, rename_file_with_hash
 from app.logUtils import append_comfyui_log, append_log_thread, start_continuous_s3_log_upload_thread
@@ -263,6 +264,7 @@ def process_output_images(outputs: Outputs):
     }
 
 def handler(job):
+    start_comfyui_subprocess()
     print(f"🧪🧪handler received job", job['id'])
     job_input = job["input"]
     job_item = job_input.get('jobItem', {})

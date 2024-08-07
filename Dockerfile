@@ -22,7 +22,7 @@ RUN apt-get update && apt-get install -y \
 RUN apt-get autoremove -y && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 RUN pip3 install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 # RUN  pip install --no-cache-dir xformers --no-deps
-RUN  pip install insightface
+# RUN  pip install insightface
 
 # Clone ComfyUI repository
 # RUN git clone --branch master --single-branch --depth 1 https://github.com/comfyanonymous/ComfyUI /comfyui

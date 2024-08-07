@@ -36,6 +36,8 @@ def start_continuous_s3_log_upload_thread(intervalMS: int = 500):
         raise ValueError("Job ID not found in job item")
 
     def upload_continuously():
+        if not log_key:
+            raise ValueError("Log key not found in job item")
         while True:
             upload_log_to_s3(log_key)
             time.sleep(intervalMS / 1000)
