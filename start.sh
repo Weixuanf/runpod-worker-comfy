@@ -18,7 +18,7 @@ cd $comfyui_path
 if [ "$SERVE_API_LOCALLY" == "true" ]; then
     python3 -u /rp_handler.py --rp_serve_api
 else
-    python3 -u /rp_handler.py
+    python3 -u /rp_handler.py --listen
 fi
 
 touch "$comfy_log_path"

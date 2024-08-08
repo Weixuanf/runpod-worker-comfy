@@ -321,21 +321,7 @@ def handler(job):
         
         # Start JupyterLab as a subprocess
         p_jupyter = subprocess.Popen(["jupyter", "lab", "--ip=0.0.0.0", "--port", str(JUPYTER_PORT), "--no-browser", "--allow-root"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        
-        # Start cloudflared tunnel for JupyterLab
-        p_jupyter_tunnel = subprocess.Popen(["cloudflared", "tunnel", "--url", f"http://127.0.0.1:{JUPYTER_PORT}"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        # Start a thread to stream the JupyterLab logs to the main console
-        threading.Thread(target=stream_subprocess_output, args=(p_jupyter,)).start()
-        jupyter_tunnel_url = None
-        for line in p_jupyter_tunnel.stderr:
-            l = line.decode()
-            if "trycloudflare.com " in l:
-                print("👉 This is the URL to access JupyterLab:", l[l.find("http"):], end='')
-                jupyter_tunnel_url = True
-                break
-        
-        if not jupyter_tunnel_url:
-            return {'error': 'Error local tunneling JupyterLab'}
+
                 
         while True:
             time.sleep(60)

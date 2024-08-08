@@ -6,9 +6,6 @@
     },
     "ipadapter/ip-adapter_sd15.safetensors": {
       "url": "https://huggingface.co/h94/IP-Adapter/resolve/main/models/ip-adapter_sd15.safetensors"
-    },
-    "ip-adapter-plus_sd15.safetensors": {
-      "url": "https://huggingface.co/h94/IP-Adapter/resolve/main/models/ip-adapter-plus_sd15.safetensors"
     }
   },
   "git_custom_nodes": {

@@ -62,7 +62,7 @@ RUN python3 /scripts/install_custom_nodes_BASIC.py
 
 # Add the start and the handler
 ADD start.sh rp_handler.py test_input.json ./
-ADD extra_model_paths.yaml /comfyui/
+# ADD extra_model_paths.yaml /comfyui/
 ADD app/ /app/
 
 # Expose port 8888 for JupyterLab

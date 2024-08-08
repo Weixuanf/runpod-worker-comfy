@@ -13,7 +13,7 @@ import time
 import git
 from git.remote import RemoteProgress
 
-COMFYUI_PATH = "/comfyui"  #network volume
+COMFYUI_PATH = os.environ.get("COMFYUI_PATH", "/comfyui") 
 pip_downgrade_blacklist = ['torch', 'torchsde', 'torchvision', 'transformers', 'safetensors', 'kornia']
 custom_nodes_path = os.path.join(COMFYUI_PATH, "custom_nodes")
 
