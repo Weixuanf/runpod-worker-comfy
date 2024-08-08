@@ -340,7 +340,7 @@ def handler(job):
         try:
             prompt = install_prompt_deps(prompt, deps, job_item)
         except Exception as e:
-            append_comfyui_log('❌Error install_prompt_deps:' + str(e))
+            append_comfyui_log('❌Error install_prompt_deps:' + str(e) + '\n' + traceback.format_exc())
             set_job_item({"status": "FAIL", "finishedAt": datetime.datetime.now().isoformat()})
             updateRunJobLogs(get_job_item())
             return {"error": f"Error installing prompt dependencies: {str(e)}"}
