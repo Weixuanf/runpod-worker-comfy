@@ -59,7 +59,7 @@ def start_comfyui_subprocess():
     logger.addHandler(file_handler)
 
     # Command to run
-    command = ['python3', '-u', 'main.py', '--port', COMFYUI_PORT]
+    command = ['python3', '-u', 'main.py', '--port', COMFYUI_PORT, '--listen']
 
     # Start the subprocess
     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
