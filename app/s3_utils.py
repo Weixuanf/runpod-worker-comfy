@@ -21,8 +21,6 @@ def upload_log_to_s3(file_key):
         log_data = f.read()
     s3_client.put_object(Bucket=s3_bucket_name, Key=file_key, Body=log_data)
 
-    print(f"✅ Uploaded log to S3 {file_key}")
-
 def upload_file_to_s3(image_location):
     file_extension = os.path.splitext(image_location)[1]
     with open(image_location, "rb") as input_file:
