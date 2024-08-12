@@ -368,14 +368,16 @@ def handler(job):
         print(f"runpod-worker-comfy queued workflow with ID {prompt_id}")
     except Exception as e:
         print('❌Error queue_workflow:', str(e))
+        print(traceback.format_exc())
+
         updateRunJobLogs({"id": job["id"], 
                 **job_item,
                 "status": "FAIL", 
                 "finishedAt": datetime.datetime.now().isoformat(),
-                "error": f"Error queuing workflow: {str(e)}",
+                "error": f"Error queuing workflow: {str(e)} {traceback.format_exc()}",
                 "duration": time.perf_counter() - time_start,
             })
-        return {"error": f"Error queuing workflow: {str(e)}"}
+        return {"error": f"Error queuing workflow: {str(e)} {traceback.format_exc()}"}
 
     # Poll for completion
     print(f"⌛️ wait until image generation is complete")

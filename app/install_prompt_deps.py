@@ -62,7 +62,10 @@ def install_prompt_images(prompt,deps):
     images = deps.get('images',{})
     for filename in images:
         image = images.get(filename)
-        download_url = image.get('url')
+        if isinstance(image, str):
+            download_url = image
+        else:
+            download_url = image.get('url')
         if not download_url:
             continue
         #save image to input folder
